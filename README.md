@@ -1,4 +1,4 @@
-# CivicLens: AI-Powered Civic Issue Reporting & Resolution Platform
+# NagriVanta: AI-Powered Civic Issue Reporting & Resolution Platform
 
 Citizens report potholes, garbage, water leaks, dark streetlights and blocked drains. Admins confirm the triage and assign a department with an SLA. Officers resolve the case with evidence. Citizens rate the fix or reopen it. Every step goes into an audit trail.
 
@@ -43,10 +43,10 @@ Demo accounts (password `Demo@12345` for all):
 
 | Role | Email |
 |---|---|
-| Admin | admin@civiclens.local |
-| Officers (Ghaziabad) | pwd / san / jal / ele / drn `.officer@civiclens.local` (e.g. pwd.officer@civiclens.local) |
-| Officers (Noida) | `noida.` + the same, e.g. noida.pwd.officer@civiclens.local |
-| Citizens | citizen1@civiclens.local, citizen2@civiclens.local, citizen3@civiclens.local |
+| Admin | admin@nagrivanta.local |
+| Officers (Ghaziabad) | pwd / san / jal / ele / drn `.officer@nagrivanta.local` (e.g. pwd.officer@nagrivanta.local) |
+| Officers (Noida) | `noida.` + the same, e.g. noida.pwd.officer@nagrivanta.local |
+| Citizens | citizen1@nagrivanta.local, citizen2@nagrivanta.local, citizen3@nagrivanta.local |
 
 These are demo-only credentials. Do not use them on a public deployment.
 
@@ -57,7 +57,7 @@ cd server
 cp .env.example .env      # Windows: copy .env.example .env
 # edit .env (see the API keys table below)
 npm install
-npm run seed              # WARNING: wipes and re-creates the CivicLens collections
+npm run seed              # WARNING: wipes and re-creates the NagriVanta collections
 npm run dev
 ```
 
@@ -67,14 +67,14 @@ Never commit `.env` files; they are git-ignored.
 
 | Variable | File | Required? | Where to get it |
 |---|---|---|---|
-| `MONGODB_URI` | `server/.env` | Yes (not for `npm run demo`) | **Local:** install MongoDB Community Server (https://www.mongodb.com/try/download/community), then use `mongodb://127.0.0.1:27017/civiclens`. **Cloud (free):** create an M0 cluster on MongoDB Atlas (https://www.mongodb.com/cloud/atlas/register) → *Database* → *Connect* → *Drivers* → copy the `mongodb+srv://…` string, put in your DB user's password, and add your IP under *Network Access*. |
+| `MONGODB_URI` | `server/.env` | Yes (not for `npm run demo`) | **Local:** install MongoDB Community Server (https://www.mongodb.com/try/download/community), then use `mongodb://127.0.0.1:27017/nagrivanta`. **Cloud (free):** create an M0 cluster on MongoDB Atlas (https://www.mongodb.com/cloud/atlas/register) → *Database* → *Connect* → *Drivers* → copy the `mongodb+srv://…` string, put in your DB user's password, and add your IP under *Network Access*. |
 | `JWT_SECRET` | `server/.env` | Yes | Any long random string. Generate one: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `GEMINI_API_KEY` | `server/.env` | Optional | Google AI Studio: https://aistudio.google.com/app/apikey → **Create API key**. Some new projects get *"free tier not available"*: enable billing at https://aistudio.google.com/billing. Without a working key the offline trained model is used. |
 | `GEMINI_MODEL` | `server/.env` | Optional | Defaults to `gemini-3.8-flash` (older 2.x models are retired for new users). Model list: https://ai.google.dev/gemini-api/docs/models |
 | `SEED_PASSWORD` | `server/.env` | For shared DBs | Password for the demo accounts that `npm run seed` creates. Any strong string. |
 | `CRON_SECRET` | `server/.env` + Vercel | For Vercel Cron | Any long random string; protects `/api/v1/jobs/sla`. |
 | `OPEN311_API_KEYS` | `server/.env` | Optional | Comma-separated random strings you give to partner systems that file cases through Open311. |
-| `WEBHOOK_URL`, `WEBHOOK_SECRET` | `server/.env` | Optional | Your endpoint for signed case events (`X-CivicLens-Signature`, HMAC-SHA256). |
+| `WEBHOOK_URL`, `WEBHOOK_SECRET` | `server/.env` | Optional | Your endpoint for signed case events (`X-NagriVanta-Signature`, HMAC-SHA256). |
 | `AUTO_ASSIGN`, `RISK_WEATHER`, `APP_TZ_OFFSET` | `server/.env` | Optional | Smart routing on/off (default on), weather-based risk alerts on/off (Open-Meteo, no key), time zone for date filters (default `+05:30`). |
 | `CORS_ORIGINS` | `server/.env` | Optional | Comma-separated browser origins allowed to call the API (defaults to the Vite and Expo web dev ports). Add your deployed web URL here. |
 | `VITE_API_URL` | `client/.env` | Production only | Leave empty in development (Vite proxies `/api`). In production set it to your API URL. |
@@ -190,7 +190,7 @@ data/        nyc311_sample.csv, civic_labelled_india.json, README.md (sources + 
 
 ## 9. Deployment (Vercel)
 
-Live demo: web **https://civiclens-web-murex.vercel.app** · API **https://civiclens-api-coral.vercel.app** (`/health`).
+Live demo: web **https://nagrivanta-web.vercel.app** · API **https://nagrivanta-api.vercel.app** (`/health`).
 
 The API and the web app are two Vercel projects:
 

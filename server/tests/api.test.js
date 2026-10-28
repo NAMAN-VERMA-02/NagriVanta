@@ -29,14 +29,14 @@ const as = (who) => ({ Authorization: `Bearer ${tokens[who]}` });
 
 before(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri('civiclens-test'));
+  await mongoose.connect(mongo.getUri('nagrivanta-test'));
   await seed({ log: () => {} });
   app = createApp();
   BEFORE = await photo('#808080', '#202020');
   AFTER = await photo('#20a020', '#f0f0f0');
   for (const [k, email] of Object.entries({
-    admin: 'admin@civiclens.local', pwd: 'pwd.officer@civiclens.local', san: 'san.officer@civiclens.local',
-    noidaPwd: 'noida.pwd.officer@civiclens.local', c1: 'citizen1@civiclens.local', c2: 'citizen2@civiclens.local',
+    admin: 'admin@nagrivanta.local', pwd: 'pwd.officer@nagrivanta.local', san: 'san.officer@nagrivanta.local',
+    noidaPwd: 'noida.pwd.officer@nagrivanta.local', c1: 'citizen1@nagrivanta.local', c2: 'citizen2@nagrivanta.local',
   })) tokens[k] = await login(email);
 });
 
@@ -88,7 +88,7 @@ test('full lifecycle: citizen -> admin -> officer -> verified resolve -> reopen 
   const depts = (await request(app).get('/api/v1/departments?city=Ghaziabad')).body.data;
   const pwd = depts.find((d) => d.code === 'PWD');
   const officers = (await request(app).get('/api/v1/admin/users?role=officer').set(as('admin'))).body.data;
-  const pwdOfficer = officers.find((o) => o.email === 'pwd.officer@civiclens.local');
+  const pwdOfficer = officers.find((o) => o.email === 'pwd.officer@nagrivanta.local');
   const assigned = await request(app).patch(`/api/v1/complaints/${c._id}/assign`).set(as('admin')).send({ departmentId: pwd._id, assignedTo: pwdOfficer.id });
   assert.equal(assigned.status, 200);
   assert.ok(assigned.body.data.sla.dueAt);
@@ -192,7 +192,7 @@ test('AI failure never blocks saving; Gemini output is used when valid', async (
 });
 
 test('community "me too" votes are one per citizen and raise priority', async () => {
-  const c = await Complaint.findOne({ reportedBy: { $ne: (await mongoose.connection.db.collection('users').findOne({ email: 'citizen1@civiclens.local' }))._id }, status: 'submitted' });
+  const c = await Complaint.findOne({ reportedBy: { $ne: (await mongoose.connection.db.collection('users').findOne({ email: 'citizen1@nagrivanta.local' }))._id }, status: 'submitted' });
   const first = await request(app).post(`/api/v1/complaints/${c._id}/upvote`).set(as('c1'));
   assert.equal(first.status, 200);
   const again = await request(app).post(`/api/v1/complaints/${c._id}/upvote`).set(as('c1'));

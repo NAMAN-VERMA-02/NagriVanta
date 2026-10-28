@@ -35,7 +35,7 @@ export default function Index() {
       </Card>
       <Card>
         <T bold size={13}>Demo accounts (after seeding the server)</T>
-        <T muted size={13}>citizen1@civiclens.local · pwd.officer@civiclens.local{'\n'}Password: Demo@12345</T>
+        <T muted size={13}>citizen1@nagrivanta.local · pwd.officer@nagrivanta.local{'\n'}Password: Demo@12345</T>
         <T muted size={12}>Admin triage and analytics are on the web app.</T>
       </Card>
     </Screen>

@@ -1,5 +1,5 @@
 // Seeds demo departments, users and complaints from ../data/civic_labelled_india.json (synthetic data).
-// WARNING: wipes the CivicLens collections in the target database. Run: npm run seed
+// WARNING: wipes the NagriVanta collections in the target database. Run: npm run seed
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import bcrypt from 'bcryptjs';
@@ -44,15 +44,15 @@ export async function seed({ log = console.log } = {}) {
   const deptFor = (city, cat) => depts.find((d) => d.city === city && d.categories.includes(cat));
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
-  const admin = await User.create({ name: 'Asha Admin', email: 'admin@civiclens.local', role: 'admin', passwordHash });
+  const admin = await User.create({ name: 'Asha Admin', email: 'admin@nagrivanta.local', role: 'admin', passwordHash });
   // Ghaziabad officers keep the short demo emails (pwd.officer@...); other cities are prefixed (noida.pwd.officer@...)
   const officers = await User.insertMany(depts.map((d) => ({
     name: `${d.city} ${d.code} Officer`,
-    email: `${d.city === CITY_NAMES[0] ? '' : `${d.city.toLowerCase()}.`}${d.code.toLowerCase()}.officer@civiclens.local`,
+    email: `${d.city === CITY_NAMES[0] ? '' : `${d.city.toLowerCase()}.`}${d.code.toLowerCase()}.officer@nagrivanta.local`,
     role: 'officer', departmentId: d._id, city: d.city, passwordHash,
   })));
   const citizens = await User.insertMany(['Ravi Kumar', 'Priya Sharma', 'Imran Khan'].map((name, i) => ({
-    name, email: `citizen${i + 1}@civiclens.local`, role: 'citizen', passwordHash,
+    name, email: `citizen${i + 1}@nagrivanta.local`, role: 'citizen', passwordHash,
   })));
 
   const histories = [];
@@ -126,7 +126,7 @@ export async function seed({ log = console.log } = {}) {
   await ComplaintHistory.collection.insertMany(histories);
 
   log(`Seeded ${depts.length} departments, ${1 + officers.length + citizens.length} users, ${data.items.length} complaints, ${histories.length} history events.`);
-  log(`Demo logins (password ${process.env.SEED_PASSWORD ? 'from SEED_PASSWORD in .env' : DEMO_PASSWORD}): admin@civiclens.local, pwd.officer@civiclens.local (Ghaziabad), noida.pwd.officer@civiclens.local, citizen1@civiclens.local`);
+  log(`Demo logins (password ${process.env.SEED_PASSWORD ? 'from SEED_PASSWORD in .env' : DEMO_PASSWORD}): admin@nagrivanta.local, pwd.officer@nagrivanta.local (Ghaziabad), noida.pwd.officer@nagrivanta.local, citizen1@nagrivanta.local`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

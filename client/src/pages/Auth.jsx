@@ -54,10 +54,10 @@ export function Login() {
         <summary className="cursor-pointer font-semibold">Demo accounts (after running the seed)</summary>
         <p className="mt-2">Password for all: <code>Demo@12345</code></p>
         <ul className="mt-1 space-y-0.5">
-          <li>Admin: admin@civiclens.local</li>
-          <li>Officer (Ghaziabad): pwd.officer@civiclens.local (also san, jal, ele, drn)</li>
-          <li>Officer (Noida): noida.pwd.officer@civiclens.local</li>
-          <li>Citizen: citizen1@civiclens.local</li>
+          <li>Admin: admin@nagrivanta.local</li>
+          <li>Officer (Ghaziabad): pwd.officer@nagrivanta.local (also san, jal, ele, drn)</li>
+          <li>Officer (Noida): noida.pwd.officer@nagrivanta.local</li>
+          <li>Citizen: citizen1@nagrivanta.local</li>
         </ul>
       </details>
     </AuthCard>

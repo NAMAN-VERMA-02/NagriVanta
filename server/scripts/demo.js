@@ -3,7 +3,7 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 const mongo = await MongoMemoryServer.create();
-process.env.MONGODB_URI = mongo.getUri('civiclens');
+process.env.MONGODB_URI = mongo.getUri('nagrivanta');
 process.env.JWT_SECRET ||= 'demo-only-secret-change-me';
 process.env.SEED_PASSWORD = ''; // throwaway in-memory data always uses the documented demo password
 

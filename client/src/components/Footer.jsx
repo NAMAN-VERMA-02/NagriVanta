@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="lg:col-span-2">
           <div className="flex items-center gap-2 font-bold">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-800 text-white"><MapPin className="h-4 w-4" aria-hidden /></span>
-            CivicLens
+            NagriVanta
           </div>
           <p className="mt-3 max-w-md text-sm text-slate-600 dark:text-slate-400">{t('footer.about')}</p>
           <p className="mt-3 text-xs text-slate-500">Web · Android/iOS app · Voice · Chat · Open311 API</p>
@@ -38,7 +38,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-slate-200 dark:border-slate-800">
         <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-500 dark:text-slate-400">
-          © {new Date().getFullYear()} CivicLens · {t('footer.disclaimer')}
+          © {new Date().getFullYear()} NagriVanta · {t('footer.disclaimer')}
         </p>
       </div>
     </footer>

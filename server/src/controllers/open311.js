@@ -56,7 +56,7 @@ const keyMatches = (key) => env.open311Keys.some((k) => k.length === key.length 
 
 // One gateway account per partner key prefix owns the cases it files.
 async function gatewayUser(apiKey) {
-  const email = `open311-${apiKey.slice(0, 6).toLowerCase().replace(/[^a-z0-9]/g, 'x')}@gateway.civiclens.local`;
+  const email = `open311-${apiKey.slice(0, 6).toLowerCase().replace(/[^a-z0-9]/g, 'x')}@gateway.nagrivanta.local`;
   return (await User.findOne({ email }))
     || User.create({ name: 'Open311 partner', email, role: 'citizen', passwordHash: await bcrypt.hash(randomBytes(24).toString('hex'), 10) });
 }

@@ -57,7 +57,7 @@ export default function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-800 text-white shadow-sm shadow-brand-700/30"><MapPin className="h-5 w-5" aria-hidden /></span>
-          <span className="text-lg">Civic<span className="text-brand-700 dark:text-brand-500">Lens</span></span>
+          <span className="text-lg">Nagri<span className="text-brand-700 dark:text-brand-500">Vanta</span></span>
         </Link>
 
         <nav aria-label="Main" className="ml-4 hidden items-center gap-1 lg:flex">

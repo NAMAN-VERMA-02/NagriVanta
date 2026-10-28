@@ -1,7 +1,7 @@
-// CivicLens service worker: app-shell caching for offline / low-bandwidth use.
+// NagriVanta service worker: app-shell caching for offline / low-bandwidth use.
 // Pages: network first, cached shell as fallback. Static assets: cache first.
 // API calls are never cached (they need fresh, permission-checked data); offline reports go to the IndexedDB outbox.
-const CACHE = 'civiclens-v2';
+const CACHE = 'nagrivanta-v2';
 const SHELL = ['/', '/index.html', '/icon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {

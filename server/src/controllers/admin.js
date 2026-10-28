@@ -54,7 +54,7 @@ export async function openDataExport(req, res) {
   const rows = await openData({ city: cityParam(req) });
   res.set('Cache-Control', 'public, max-age=300');
   if (req.params.format === 'csv') {
-    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="civiclens-open-data.csv"' });
+    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="nagrivanta-open-data.csv"' });
     return res.send(toCsv(rows));
   }
   return ok(res, rows, { count: rows.length, licence: 'CC BY 4.0', note: 'Anonymised: no names or free text; locations rounded to ~110 m.' });

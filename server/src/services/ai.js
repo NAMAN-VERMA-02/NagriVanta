@@ -99,7 +99,7 @@ export function localTriage(title, description, error) {
     reasons: [...reasons, ...p.factors.map((f) => f.label)].slice(0, 5),
     confidence,
     usedImage: false,
-    model: engine === 'naive-bayes' ? 'civiclens-nb-v1' : 'rules-v1',
+    model: engine === 'naive-bayes' ? 'nagrivanta-nb-v1' : 'rules-v1',
     ...(error && { error: String(error).slice(0, 200) }),
   };
 }

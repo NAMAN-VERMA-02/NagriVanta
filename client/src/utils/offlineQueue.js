@@ -2,7 +2,7 @@ import { api } from '../services/api';
 import { dataUrlToFile, fileToDataUrl } from './media';
 
 // Reports made while offline are kept in IndexedDB and sent when the connection returns.
-const DB = 'civiclens';
+const DB = 'nagrivanta';
 const STORE = 'outbox';
 
 function open() {

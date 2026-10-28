@@ -22,9 +22,9 @@ export function AppHeader() {
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: c.card, borderBottomWidth: 1, borderColor: c.border }}>
       <View style={s.headerRow}>
-        <Pressable onPress={() => router.replace('/')} accessibilityRole="link" accessibilityLabel="CivicLens home" style={s.brand}>
-          <View style={[s.logo, { backgroundColor: c.brand }]}><Text style={{ color: c.brandText, fontWeight: '800' }}>C</Text></View>
-          <Text style={[s.brandText, { color: c.text }]}>Civic<Text style={{ color: c.brand }}>Lens</Text></Text>
+        <Pressable onPress={() => router.replace('/')} accessibilityRole="link" accessibilityLabel="NagriVanta home" style={s.brand}>
+          <View style={[s.logo, { backgroundColor: c.brand }]}><Text style={{ color: c.brandText, fontWeight: '800' }}>N</Text></View>
+          <Text style={[s.brandText, { color: c.text }]}>Nagri<Text style={{ color: c.brand }}>Vanta</Text></Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Pressable onPress={toggleLang} style={[s.iconBtn, { borderColor: c.border }]} accessibilityRole="button" accessibilityLabel={lang === 'en' ? 'हिंदी में देखें' : 'View in English'}>
@@ -60,11 +60,11 @@ export function AppFooter() {
   const { c } = useTheme();
   return (
     <View style={[s.footer, { borderColor: c.border }]}>
-      <Text style={{ color: c.text, fontWeight: '700' }}>CivicLens</Text>
+      <Text style={{ color: c.text, fontWeight: '700' }}>NagriVanta</Text>
       <Text style={{ color: c.muted, fontSize: 12, marginTop: 4 }}>
         Independent pilot project, not an official government system. In an emergency call 112.
       </Text>
-      <Text style={{ color: c.muted, fontSize: 11, marginTop: 4 }}>© {new Date().getFullYear()} CivicLens · Map data © OpenStreetMap contributors</Text>
+      <Text style={{ color: c.muted, fontSize: 11, marginTop: 4 }}>© {new Date().getFullYear()} NagriVanta · Map data © OpenStreetMap contributors</Text>
     </View>
   );
 }
