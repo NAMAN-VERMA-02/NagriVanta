@@ -5,7 +5,7 @@ import {
   Plug, Route, Search, ShieldCheck, Sparkles, Star, Timer, WifiOff,
 } from 'lucide-react';
 import { RiskAlerts } from '../components/Insights';
-import { MapLegend, PointsMap } from '../components/Maps';
+import { PointsMap } from '../components/Maps';
 import { useAuth } from '../context/AuthContext';
 import { usePrefs } from '../context/PrefsContext';
 import { useCountUp, useReveal } from '../hooks/useMotion';
@@ -91,7 +91,6 @@ export default function Home() {
         <div className="animate-[pop_0.9s_var(--ease-out-expo)_0.15s_both] rounded-3xl border border-slate-200 bg-white p-2.5 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.45)] dark:border-slate-800 dark:bg-ink-900">
           <PointsMap points={card?.points || []} hotspots={card?.hotspots || []} height={420} />
           <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-1 pt-2">
-            <MapLegend />
             <p className="text-xs text-slate-500">{t('home.rounded')}</p>
           </div>
         </div>

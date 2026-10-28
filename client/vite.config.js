@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000',
       '/uploads': 'http://localhost:5000',
+      '/health': 'http://localhost:5000',
     },
   },
 });

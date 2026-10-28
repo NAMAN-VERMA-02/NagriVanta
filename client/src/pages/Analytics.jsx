@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HBar, TrendLine } from '../components/Charts';
 import { CityFilter, HotspotTable, RiskAlerts } from '../components/Insights';
-import { MapLegend, PointsMap } from '../components/Maps';
+import { PointsMap } from '../components/Maps';
 import { ErrorBox, PageTitle, Spinner, Stat } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -69,9 +69,8 @@ export default function Analytics() {
 
           <section className="card p-5">
             <h2 className="mb-1 font-semibold">Recurrence heatmap</h2>
-            <p className="mb-3 text-xs text-slate-500">Dots are reports; dashed red rings are hotspots with 3+ reports of the same issue within ~110 m in 90 days.</p>
+            <p className="mb-3 text-xs text-slate-500">Switch between clusters, pins and a heat layer; tap a category to filter. Dashed red rings are hotspots: 3+ reports of the same issue within ~110 m in 90 days.</p>
             <PointsMap points={m.points} hotspots={m.hotspots} height={420} />
-            <MapLegend />
             <div className="mt-4"><HotspotTable hotspots={m.hotspots} /></div>
           </section>
 

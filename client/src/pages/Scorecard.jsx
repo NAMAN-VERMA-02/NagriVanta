@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, Plug } from 'lucide-react';
 import { HBar } from '../components/Charts';
 import { CityFilter, HotspotTable, RiskAlerts } from '../components/Insights';
-import { MapLegend, PointsMap } from '../components/Maps';
+import { PointsMap } from '../components/Maps';
 import { ErrorBox, PageTitle, Spinner } from '../components/ui';
 import { API_ORIGIN, api } from '../services/api';
 import { categoryLabel, fmtDate } from '../utils/format';
@@ -72,7 +72,6 @@ export default function Scorecard() {
             <section className="card p-5">
               <h2 className="mb-3 font-semibold">Where issues recur</h2>
               <PointsMap points={d.points} hotspots={d.hotspots} height={280} />
-              <MapLegend />
             </section>
           </div>
           <section className="card p-5">

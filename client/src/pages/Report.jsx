@@ -291,7 +291,7 @@ export default function Report() {
             </div>
             <MapPicker value={loc} onChange={(v, src) => { setLoc(v); setLocFrom(src === 'gps' ? 'gps' : 'map'); }} height={lite ? 220 : 360} />
             <p className="mt-2 text-xs text-slate-500" aria-live="polite">
-              {loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}. ` : `${t('report.clickMap')} `}
+              {!loc && `${t('report.clickMap')} `}
               {locFrom === 'photo' && t('report.fromPhoto')}{locFrom === 'pincode' && (lang === 'hi' ? 'पिनकोड के इलाक़े पर। सही जगह के लिए नक्शे पर क्लिक करें।' : 'Centred on your pincode area. Click the exact spot on the map.')} {geoMsg}
             </p>
           </div>
