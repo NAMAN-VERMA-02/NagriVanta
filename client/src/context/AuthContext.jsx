@@ -22,6 +22,9 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  // re-read the signed-in user, e.g. after editing the profile
+  const refresh = useCallback(() => api('/auth/me').then(({ data }) => setUser(data.user)).catch(() => {}), []);
+
   const logout = useCallback(async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => {});
     setToken(null);
@@ -29,7 +32,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login: (b) => signIn('/auth/login', b), register: (b) => signIn('/auth/register', b), logout }}>
+    <AuthContext.Provider value={{ user, loading, login: (b) => signIn('/auth/login', b), register: (b) => signIn('/auth/register', b), logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

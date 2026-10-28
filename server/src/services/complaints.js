@@ -51,6 +51,7 @@ export async function createComplaint(input, user, media = {}) {
     location: { type: 'Point', coordinates: [lng, lat] },
     locationSource: input.lat != null ? (input.locationSource || 'map') : 'photo',
     address: input.address,
+    pincode: input.pincode,
     ward,
     images: media.images || [],
     videos: media.videos || [],

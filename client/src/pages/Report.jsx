@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { CircleCheck, Copy, ImagePlus, LocateFixed, Mic, MicOff, TriangleAlert, Video, X } from 'lucide-react';
+import { CircleCheck, Copy, ImagePlus, LoaderCircle, LocateFixed, MapPin, Mic, MicOff, Share2, TriangleAlert, Video, X } from 'lucide-react';
 import { MapPicker } from '../components/Maps';
 import { ErrorBox, PageTitle, StatusBadge } from '../components/ui';
 import { usePrefs } from '../context/PrefsContext';
@@ -11,7 +11,9 @@ import { CATEGORIES } from '../utils/format';
 import { MAX_BODY_BYTES, compressImage, readPhotoMeta } from '../utils/media';
 import { queueReport } from '../utils/offlineQueue';
 
-const EMPTY = { title: '', description: '', category: 'auto', city: '', ward: '', address: '' };
+const EMPTY = { title: '', description: '', category: 'auto', city: '', ward: '', address: '', pincode: '' };
+// India Post district names that map to a configured city
+const DISTRICT_CITY = { Ghaziabad: 'Ghaziabad', 'Gautam Buddha Nagar': 'Noida', 'Gautam Buddh Nagar': 'Noida' };
 
 export default function Report() {
   const { t, lang, lite, online } = usePrefs();
@@ -22,6 +24,10 @@ export default function Report() {
   const [cities, setCities] = useState([]);
   const [loc, setLoc] = useState(null);
   const [locFrom, setLocFrom] = useState('');
+  const [pinInfo, setPinInfo] = useState(null);
+  const [pinState, setPinState] = useState('idle'); // idle | loading | error
+  const [place, setPlace] = useState(null); // reverse-geocoded address for the pin
+  const [linkCopied, setLinkCopied] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [video, setVideo] = useState(null);
   const [dups, setDups] = useState([]);
@@ -86,6 +92,39 @@ export default function Report() {
     setVideo(f);
   };
 
+  // Pincode -> district, state, post-office areas and a map centre (India Post + OpenStreetMap)
+  const lookupPin = async (pin) => {
+    setPinState('loading');
+    try {
+      const { data } = await api(`/geo/pincode/${pin}`);
+      setPinInfo(data);
+      setPinState('idle');
+      const city = DISTRICT_CITY[data.district];
+      if (city) setForm((f) => (f.city ? f : { ...f, city }));
+      if (!loc && data.center) { setLoc(data.center); setLocFrom('pincode'); }
+    } catch {
+      setPinInfo(null);
+      setPinState('error');
+    }
+  };
+  const onPin = (e) => {
+    const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setForm((f) => ({ ...f, pincode: pin }));
+    if (pin.length === 6) lookupPin(pin); else { setPinInfo(null); setPinState('idle'); }
+  };
+
+  // When the pin moves, look up the street address and pincode for it (suggestion only)
+  useEffect(() => {
+    if (!loc || !online || locFrom === 'pincode') return undefined;
+    const tm = setTimeout(() => {
+      api('/geo/reverse', { query: { lat: loc.lat, lng: loc.lng } }).then(({ data }) => {
+        setPlace(data);
+        if (data?.pincode) setForm((f) => (f.pincode ? f : { ...f, pincode: data.pincode }));
+      }).catch(() => setPlace(null));
+    }, 700);
+    return () => clearTimeout(tm);
+  }, [loc, online, locFrom]);
+
   const totalBytes = photos.reduce((s, p) => s + p.file.size, 0) + (video?.size || 0);
 
   const submit = async (e) => {
@@ -116,7 +155,8 @@ export default function Report() {
     } finally { setBusy(false); }
   };
 
-  const reset = () => { setDone(null); setForm(EMPTY); setPhotos([]); setVideo(null); setLoc(null); setSource('web'); };
+  const reset = () => { setDone(null); setForm(EMPTY); setPhotos([]); setVideo(null); setLoc(null); setSource('web'); setPinInfo(null); setPlace(null); setLinkCopied(false); };
+  const shareTrack = async () => { await navigator.clipboard?.writeText(`${window.location.origin}/track/${done.referenceId}`); setLinkCopied(true); };
 
   if (done) {
     return (
@@ -136,6 +176,7 @@ export default function Report() {
         )}
         <div className="mt-6 flex justify-center gap-3">
           {!done.offline && <Link to={`/complaints/${done._id}`} className="btn-primary">{t('report.track')}</Link>}
+          {!done.offline && <button type="button" className="btn-secondary" onClick={shareTrack}><Share2 className="h-4 w-4" aria-hidden />{linkCopied ? 'Link copied' : 'Share tracking link'}</button>}
           <button type="button" className="btn-secondary" onClick={reset}>{t('report.another')}</button>
         </div>
       </div>
@@ -170,7 +211,7 @@ export default function Report() {
               <label className="label" htmlFor="cat">{t('report.category')}</label>
               <select id="cat" className="input" value={form.category} onChange={set('category')}>
                 <option value="auto">{t('report.auto')}</option>
-                {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.emoji} {lang === 'hi' ? CATEGORY_HI[c.value] : c.label}</option>)}
+                {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{lang === 'hi' ? CATEGORY_HI[c.value] : c.label}</option>)}
               </select>
             </div>
             <div>
@@ -188,9 +229,35 @@ export default function Report() {
               </select>
             </div>
           </div>
-          <div>
-            <label className="label" htmlFor="addr">{t('report.landmark')}</label>
-            <input id="addr" className="input" maxLength={200} value={form.address} onChange={set('address')} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="label" htmlFor="pin">{lang === 'hi' ? 'पिनकोड' : 'Pincode'}</label>
+              <div className="relative">
+                <input id="pin" className="input pr-9 font-semibold tabular-nums tracking-widest" inputMode="numeric" autoComplete="postal-code" placeholder="201010"
+                  maxLength={6} value={form.pincode} onChange={onPin} aria-describedby="pin-help" aria-invalid={pinState === 'error'} />
+                {pinState === 'loading' && <LoaderCircle className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-slate-400" aria-hidden />}
+                {pinInfo && pinState === 'idle' && <CircleCheck className="absolute right-3 top-2.5 h-4 w-4 animate-pop text-emerald-600" aria-hidden />}
+              </div>
+              <p id="pin-help" className={`mt-1 text-xs ${pinState === 'error' ? 'text-red-600' : 'text-slate-500'}`} aria-live="polite">
+                {pinState === 'error' ? 'Pincode not found. Check the 6 digits.' : pinInfo ? [pinInfo.district, pinInfo.state].filter(Boolean).join(', ') : (lang === 'hi' ? '6 अंक; इलाक़ा अपने आप भरेगा' : '6 digits; fills in your area')}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="addr">{t('report.landmark')}</label>
+              <input id="addr" className="input" maxLength={200} value={form.address} onChange={set('address')} placeholder={lang === 'hi' ? 'जैसे: मेट्रो गेट 2 के सामने' : 'e.g. opposite metro gate 2'} />
+              {pinInfo?.areas?.length > 0 && (
+                <select className="input mt-2" aria-label="Area or post office" value="" onChange={(e) => e.target.value && setForm((f) => ({ ...f, address: `${e.target.value}${f.address ? `, ${f.address}` : ''}`.slice(0, 200) }))}>
+                  <option value="">{lang === 'hi' ? 'इलाक़ा / डाकघर चुनें…' : 'Pick your area / post office…'}</option>
+                  {pinInfo.areas.map((a) => <option key={a.name} value={a.name}>{a.name}</option>)}
+                </select>
+              )}
+              {place?.label && !form.address && (
+                <button type="button" onClick={() => setForm((f) => ({ ...f, address: place.label.slice(0, 200) }))}
+                  className="mt-2 inline-flex max-w-full animate-fade items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 hover:bg-brand-100 dark:bg-brand-800/30 dark:text-brand-100">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden /><span className="truncate">Use: {place.label}</span>
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <span className="label">{t('report.media')}</span>
@@ -222,10 +289,10 @@ export default function Report() {
               <span className="label mb-0">{t('report.location')}</span>
               <button type="button" className="btn-secondary px-3 py-1.5" onClick={locate}><LocateFixed className="h-4 w-4" aria-hidden /> {t('report.useLoc')}</button>
             </div>
-            <MapPicker value={loc} onChange={(v) => { setLoc(v); setLocFrom('map'); }} height={lite ? 200 : 320} />
+            <MapPicker value={loc} onChange={(v, src) => { setLoc(v); setLocFrom(src === 'gps' ? 'gps' : 'map'); }} height={lite ? 220 : 360} />
             <p className="mt-2 text-xs text-slate-500" aria-live="polite">
               {loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}. ` : `${t('report.clickMap')} `}
-              {locFrom === 'photo' && t('report.fromPhoto')} {geoMsg}
+              {locFrom === 'photo' && t('report.fromPhoto')}{locFrom === 'pincode' && (lang === 'hi' ? 'पिनकोड के इलाक़े पर। सही जगह के लिए नक्शे पर क्लिक करें।' : 'Centred on your pincode area. Click the exact spot on the map.')} {geoMsg}
             </p>
           </div>
 

@@ -18,6 +18,11 @@ import Queue from './pages/Queue';
 import Analytics from './pages/Analytics';
 import Scorecard from './pages/Scorecard';
 import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
+import Guide from './pages/Guide';
+import About from './pages/About';
+import Faq from './pages/Faq';
+import Track from './pages/Track';
 
 // Sends reports saved while offline as soon as the user is signed in and online.
 function OutboxBanner() {
@@ -43,12 +48,16 @@ function OutboxBanner() {
 }
 
 function Layout() {
+  const { pathname } = useLocation();
+  // scroll to the top on navigation, like a normal website
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <OutboxBanner />
       <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-        <Outlet />
+        {/* keyed by route so each page enters with a short, calm transition */}
+        <div key={pathname} className="animate-page"><Outlet /></div>
       </main>
       <Footer />
       <Assistant />
@@ -74,6 +83,11 @@ export default function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="scorecard" element={<Scorecard />} />
+        <Route path="how-it-works" element={<Guide />} />
+        <Route path="about" element={<About />} />
+        <Route path="faq" element={<Faq />} />
+        <Route path="track" element={<Track />} />
+        <Route path="track/:ref" element={<Track />} />
         <Route element={<RequireRole roles={['citizen']} />}>
           <Route path="report" element={<Report />} />
           <Route path="my-reports" element={<MyReports />} />
@@ -86,6 +100,7 @@ export default function App() {
         <Route element={<RequireRole />}>
           <Route path="complaints/:id" element={<ComplaintDetail />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
         <Route path="*" element={<div className="py-20 text-center"><h1 className="text-2xl font-bold">Page not found</h1></div>} />
       </Route>

@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, usePathname } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,8 +18,8 @@ export function AppHeader() {
   const { t, lang, toggleLang } = usePrefs();
   const path = usePathname();
   const links = user?.role === 'citizen'
-    ? [['/reports', t('myReports')], ['/report', t('report')], ['/community', t('nearby')], ['/chat', t('chat')]]
-    : user ? [['/queue', t('queue')], ['/chat', t('chat')]] : [['/chat', t('chat')]];
+    ? [['/reports', t('myReports')], ['/report', t('report')], ['/community', t('nearby')], ['/chat', t('chat')], ['/profile', t('profile')]]
+    : user ? [['/queue', t('queue')], ['/chat', t('chat')], ['/profile', t('profile')]] : [['/chat', t('chat')]];
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: c.card, borderBottomWidth: 1, borderColor: c.border }}>
       <View style={s.headerRow}>
@@ -31,7 +32,7 @@ export function AppHeader() {
             <Text style={{ color: c.text, fontWeight: '700', fontSize: 13 }}>{lang === 'en' ? 'हिं' : 'EN'}</Text>
           </Pressable>
           <Pressable onPress={toggle} style={[s.iconBtn, { borderColor: c.border }]} accessibilityRole="button" accessibilityLabel={scheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-            <Text style={{ fontSize: 18 }}>{scheme === 'dark' ? '☀️' : '🌙'}</Text>
+            <Ionicons name={scheme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={20} color={scheme === 'dark' ? '#fcd34d' : c.text} />
           </Pressable>
           {user && (
             <Pressable onPress={async () => { await logout(); router.replace('/'); }} style={[s.iconBtn, { borderColor: c.border }]} accessibilityRole="button" accessibilityLabel="Sign out">

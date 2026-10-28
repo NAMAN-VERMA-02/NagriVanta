@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const S = {
   en: {
-    myReports: 'My reports', report: 'Report', nearby: 'Nearby', chat: 'Assistant', queue: 'Queue', signOut: 'Out',
+    profile: 'Profile', myReports: 'My reports', report: 'Report', nearby: 'Nearby', chat: 'Assistant', queue: 'Queue', signOut: 'Out',
     reportTitle: 'Report an issue', reportSub: 'A clear photo and exact location help the right team.',
     shortTitle: 'Short title', what: 'What is the problem?', whatPh: 'English or Hindi is fine. Tap the mic on your keyboard to speak.',
     category: 'Category', ward: 'Ward', landmark: 'Landmark (optional)', location: 'Location', useLoc: 'Use my location', locating: 'Locating…',
@@ -15,7 +15,7 @@ const S = {
     chatHello: 'Namaste! Describe a problem and I will draft a report, or send a reference ID to check its status.',
   },
   hi: {
-    myReports: 'मेरी शिकायतें', report: 'शिकायत', nearby: 'आस-पास', chat: 'सहायक', queue: 'कतार', signOut: 'बाहर',
+    profile: 'प्रोफ़ाइल', myReports: 'मेरी शिकायतें', report: 'शिकायत', nearby: 'आस-पास', chat: 'सहायक', queue: 'कतार', signOut: 'बाहर',
     reportTitle: 'समस्या दर्ज करें', reportSub: 'साफ़ फ़ोटो और सही लोकेशन से सही टीम जल्दी काम करती है।',
     shortTitle: 'छोटा शीर्षक', what: 'समस्या क्या है?', whatPh: 'हिंदी या अंग्रेज़ी में लिखें। बोलने के लिए कीबोर्ड का माइक दबाएँ।',
     category: 'श्रेणी', ward: 'वार्ड', landmark: 'पहचान स्थल (वैकल्पिक)', location: 'लोकेशन', useLoc: 'मेरी लोकेशन लें', locating: 'लोकेशन ढूँढ रहे हैं…',

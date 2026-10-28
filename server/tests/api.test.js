@@ -297,6 +297,46 @@ test('assistant drafts reports (English + Hindi), answers status, handles emerge
   assert.match(sos.body.data.reply, /112/);
 });
 
+test('profile: stats, level, badges, activity; edit details; change password', async () => {
+  const p = await request(app).get('/api/v1/profile').set(as('c1'));
+  assert.equal(p.status, 200);
+  assert.equal(p.body.data.user.email, 'citizen1@nagrivanta.local');
+  assert.ok(p.body.data.stats.reports > 0);
+  assert.ok(p.body.data.level.name);
+  assert.equal(p.body.data.badges.find((b) => b.id === 'first').earned, true);
+  assert.ok(p.body.data.activity.length > 0);
+  assert.equal(p.body.data.monthly.length, 6);
+
+  const staff = await request(app).get('/api/v1/profile').set(as('pwd'));
+  assert.ok('resolvedByMe' in staff.body.data.stats);
+
+  const upd = await request(app).patch('/api/v1/profile').set(as('c1')).send({ name: 'Ravi K.', preferredLanguage: 'hi', phone: '+91 98765 43210' });
+  assert.equal(upd.body.data.user.name, 'Ravi K.');
+  assert.equal((await request(app).patch('/api/v1/profile').set(as('c1')).send({ role: 'admin' })).status, 400, 'role cannot be changed');
+
+  const reg = await request(app).post('/api/v1/auth/register').send({ name: 'Pw Test', email: 'pw@example.com', password: 'firstpassword' });
+  const tk = reg.body.data.token;
+  assert.equal((await request(app).post('/api/v1/profile/password').set('Authorization', `Bearer ${tk}`).send({ currentPassword: 'wrong', newPassword: 'secondpassword' })).status, 401);
+  assert.equal((await request(app).post('/api/v1/profile/password').set('Authorization', `Bearer ${tk}`).send({ currentPassword: 'firstpassword', newPassword: 'secondpassword' })).status, 200);
+  assert.equal((await request(app).post('/api/v1/auth/login').send({ email: 'pw@example.com', password: 'secondpassword' })).status, 200);
+});
+
+test('public tracking by reference ID shows milestones only; pincode is validated', async () => {
+  const c = await Complaint.findOne({ status: 'closed' });
+  const t = await request(app).get(`/api/v1/public/track/${c.referenceId.toLowerCase()}`);
+  assert.equal(t.status, 200);
+  assert.equal(t.body.data.status, 'closed');
+  assert.ok(t.body.data.timeline.length >= 3);
+  assert.ok(!JSON.stringify(t.body).match(/reportedBy|description|note|@/), 'no personal data or notes');
+  assert.equal((await request(app).get('/api/v1/public/track/CIV-000000-00000000')).status, 404);
+  assert.equal((await request(app).get('/api/v1/public/track/hello')).status, 400);
+  assert.equal((await request(app).get('/api/v1/geo/pincode/12345')).status, 400);
+  const bad = await request(app).post('/api/v1/complaints').set(as('c2')).send({ title: 'Pothole here', description: 'Deep pothole on the road', lat: 28.64, lng: 77.36, pincode: '0123' });
+  assert.equal(bad.status, 400);
+  const good = await request(app).post('/api/v1/complaints').set(as('c2')).send({ title: 'Pothole here', description: 'Deep pothole on the road', lat: 28.64, lng: 77.36, pincode: '201010' });
+  assert.equal(good.body.data.pincode, '201010');
+});
+
 test('cron endpoint requires the secret; SLA job escalates exactly once', async () => {
   assert.equal((await request(app).get('/api/v1/jobs/sla')).status, 403);
   assert.equal((await request(app).get('/api/v1/jobs/sla').set('Authorization', 'Bearer nope')).status, 403);

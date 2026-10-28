@@ -20,6 +20,7 @@ const complaintSchema = new mongoose.Schema({
   },
   locationSource: { type: String, enum: ['gps', 'map', 'photo', 'channel'], default: 'map' },
   address: { type: String, trim: true, maxlength: 200 },
+  pincode: { type: String, match: /^[1-9]\d{5}$/ },
   ward: { type: String, trim: true, maxlength: 80, index: true },
   images: [String],
   videos: [String],

@@ -42,6 +42,7 @@ export const createComplaintSchema = z.strictObject({
   address: z.string().trim().max(200).optional(),
   ward: z.string().trim().max(80).optional(),
   city: z.enum(CITY_NAMES).optional(),
+  pincode: z.string().trim().regex(/^[1-9]\d{5}$/, 'Pincode must be 6 digits').optional(),
   source: z.enum(['web', 'mobile', 'voice', 'chat']).optional(),
 });
 
@@ -115,6 +116,20 @@ export const open311CreateSchema = z.object({
   account_id: z.string().trim().max(80).optional(), // the caller's own id for this request (shared case id)
   first_name: z.string().trim().max(60).optional(),
 });
+
+export const updateProfileSchema = z.strictObject({
+  name: z.string().trim().min(2).max(80).optional(),
+  phone: z.string().trim().regex(/^[+\d][\d\s-]{6,18}$/, 'Enter a valid phone number').or(z.literal('')).optional(),
+  preferredLanguage: z.enum(['en', 'hi']).optional(),
+  city: z.enum(CITY_NAMES).optional(),
+});
+
+export const changePasswordSchema = z.strictObject({
+  currentPassword: z.string().min(1).max(100),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters').max(100),
+});
+
+export const geoReverseSchema = z.object({ lat: num(-90, 90), lng: num(-180, 180) });
 
 export const departmentSlaSchema = z.strictObject({
   slaHours: z.strictObject(Object.fromEntries(PRIORITIES.map((p) => [p, z.number().int().min(1).max(24 * 60)]))).partial(),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { ThumbsUp } from 'lucide-react';
 import { CityFilter } from '../components/Insights';
 import { CategoryBadge, Empty, ErrorBox, PageTitle, PriorityBadge, Spinner, StatusBadge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
@@ -82,7 +83,7 @@ export default function Queue() {
                     <td className="px-4 py-3"><CategoryBadge category={c.category} />{c.aiAnalysis?.category && c.aiAnalysis.category !== c.category && <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">AI: {c.aiAnalysis.category}</p>}</td>
                     <td className="px-4 py-3"><PriorityBadge priority={c.priority} /></td>
                     <td className="px-4 py-3">{c.ward || '—'}<p className="text-xs text-slate-500">{c.city}</p></td>
-                    <td className="px-4 py-3">{c.departmentId?.name || <span className="text-slate-400">Unassigned</span>}{c.routing?.method === 'auto' && <span className="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-800 dark:bg-brand-800/30 dark:text-brand-100">AUTO</span>}{c.upvotes > 0 && <p className="text-xs text-slate-500">👍 {c.upvotes}</p>}</td>
+                    <td className="px-4 py-3">{c.departmentId?.name || <span className="text-slate-400">Unassigned</span>}{c.routing?.method === 'auto' && <span className="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-800 dark:bg-brand-800/30 dark:text-brand-100">AUTO</span>}{c.upvotes > 0 && <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500"><ThumbsUp className="h-3 w-3" aria-hidden />{c.upvotes}</p>}</td>
                     <td className={`px-4 py-3 text-xs font-medium ${sla?.overdue ? 'text-red-600' : ''}`}>{sla?.text || '—'}</td>
                   </tr>
                 );

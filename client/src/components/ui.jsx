@@ -18,7 +18,7 @@ export function CategoryBadge({ category }) {
   return <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-800 dark:bg-brand-800/30 dark:text-brand-100">{lang === 'hi' ? CATEGORY_HI[category] || category : categoryLabel(category)}</span>;
 }
 
-export function Spinner({ label = 'Loading…' }) {
+export function Spinner({ label = "Loading…" }) {
   return (
     <div role="status" className="flex items-center justify-center gap-2 py-12 text-slate-500">
       <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> {label}
@@ -70,4 +70,17 @@ export function Stat({ label, value, hint, tone = '' }) {
       {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
     </div>
   );
+}
+
+// Initials avatar; the colour is derived from the name so each person keeps the same one.
+const AVATAR_TONES = ['bg-teal-600', 'bg-sky-600', 'bg-indigo-600', 'bg-violet-600', 'bg-rose-600', 'bg-amber-600', 'bg-emerald-600', 'bg-cyan-700'];
+export function Avatar({ name = '', size = 'md' }) {
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('') || '?';
+  const tone = AVATAR_TONES[[...name].reduce((s, ch) => s + ch.charCodeAt(0), 0) % AVATAR_TONES.length];
+  const dims = { sm: 'h-8 w-8 text-xs', md: 'h-10 w-10 text-sm', xl: 'h-20 w-20 text-2xl sm:h-24 sm:w-24 sm:text-3xl' }[size];
+  return <span className={`inline-flex shrink-0 select-none items-center justify-center rounded-full font-bold text-white ${tone} ${dims}`} aria-hidden>{initials}</span>;
+}
+
+export function Skeleton({ className = '' }) {
+  return <span className={`skeleton block ${className}`} aria-hidden />;
 }

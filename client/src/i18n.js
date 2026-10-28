@@ -1,6 +1,7 @@
 // UI strings in English and Hindi. Missing Hindi keys fall back to English.
 export const STRINGS = {
   en: {
+    'nav.guide': 'How it works', 'nav.about': 'About', 'nav.faq': 'FAQ', 'nav.track': 'Track a report', 'nav.profile': 'My profile', 'nav.notifications': 'Notifications',
     'nav.report': 'Report issue', 'nav.mine': 'My reports', 'nav.community': 'Nearby issues', 'nav.scorecard': 'Public scorecard',
     'nav.queue': 'Triage queue', 'nav.myqueue': 'My queue', 'nav.analytics': 'Analytics', 'nav.signin': 'Sign in', 'nav.start': 'Get started', 'nav.signout': 'Sign out',
     'lite.on': 'Lite mode on', 'lite.off': 'Lite mode', 'lite.hint': 'Saves data: no map tiles, smaller photos',
@@ -32,6 +33,7 @@ export const STRINGS = {
     'footer.platform': 'Platform', 'footer.data': 'Open data & integration', 'footer.disclaimer': 'Independent pilot project, not an official government system. In an emergency call 112.',
   },
   hi: {
+    'nav.guide': 'कैसे काम करता है', 'nav.about': 'हमारे बारे में', 'nav.faq': 'सवाल-जवाब', 'nav.track': 'शिकायत ट्रैक करें', 'nav.profile': 'मेरी प्रोफ़ाइल', 'nav.notifications': 'सूचनाएँ',
     'nav.report': 'समस्या दर्ज करें', 'nav.mine': 'मेरी शिकायतें', 'nav.community': 'आस-पास की समस्याएँ', 'nav.scorecard': 'सार्वजनिक स्कोरकार्ड',
     'nav.queue': 'जाँच कतार', 'nav.myqueue': 'मेरी कतार', 'nav.analytics': 'विश्लेषण', 'nav.signin': 'साइन इन', 'nav.start': 'शुरू करें', 'nav.signout': 'साइन आउट',
     'lite.on': 'लाइट मोड चालू', 'lite.off': 'लाइट मोड', 'lite.hint': 'डेटा बचाता है: नक्शा नहीं, छोटी फ़ोटो',

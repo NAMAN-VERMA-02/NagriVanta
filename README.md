@@ -116,7 +116,7 @@ A production build that talks to a plain `http://` API on Android needs HTTPS or
 
 ```bash
 cd server
-npm test        # 25 tests: workflow, permissions, uploads, AI fallback + background Gemini refinement, routing, duplicates, audit chain, votes, Open311, assistant, SLA
+npm test        # 27 tests (incl. profile, password change, public tracking, pincode validation): workflow, permissions, uploads, AI fallback + background Gemini refinement, routing, duplicates, audit chain, votes, Open311, assistant, SLA
 npm run train   # retrain the offline classifier (writes src/ai/model.json)
 npm run eval    # held-out accuracy: keyword rules vs trained model (vs Gemini when the key works)
 ```
@@ -157,6 +157,17 @@ An automated end-to-end check against the live API exercised every feature: role
 | 17 | Community feedback & ratings | "Me too" upvotes (one per citizen, raise priority), 1–5 ratings, reopen within 30 days. |
 | 18 | Scalable multi-city deployment | Cities/wards config, per-city departments and officers, city filters everywhere, stateless serverless API with indexed MongoDB. |
 
+### Beyond the 18
+
+| Feature | What it does |
+|---|---|
+| **Advanced profile** (`/profile`, web + app) | Personal details, civic level and points, 8 badges, monthly chart, category breakdown, full activity timeline, a map of everything you reported, and settings (name, phone, language, theme, Lite mode, change password). Officers and admins see performance instead: active, overdue, resolved by me, median fix time, citizen rating. |
+| **Map like a map app** | Every map has a style switcher (Default, Streets, **Satellite** with labels, **Terrain**, Light, Dark), place search, "my location", full screen, zoom and a scale bar. The choice is remembered; Default follows light/dark. Free tile providers, no API keys. |
+| **Pincode on reports** | Type a 6-digit pincode: district, state and post-office areas come from India Post, the map jumps to the area and the city is filled in. Dropping a pin suggests the street address and pincode (OpenStreetMap reverse geocoding). Lookups go through the API and are cached in MongoDB. |
+| **Public tracking** (`/track/CIV-…`) | Anyone can check a case by reference ID without signing in: progress bar, department, target date, supporters and status milestones only (no names, notes or exact location). Shareable link after submitting. |
+| **Guest pages** | Signed-out visitors get How it works (step-by-step for citizens, officers, admins, in English and Hindi), Track, Scorecard, About (principles, emergency 112, open source) and a searchable bilingual FAQ. |
+| **Polish & motion** | Self-hosted Plus Jakarta Sans + Noto Sans Devanagari, themed selection/scrollbars/focus rings, page transitions, scroll reveals, count-up stats, skeleton loaders; all motion turns off with the system "reduce motion" setting. |
+
 Also fixed from the code audit: unguessable image links, AI triage awaited (works on serverless), photo compression for Vercel's 4.5 MB limit, time-zone-correct due dates and date filters, no orphan uploads on failed updates, fresh evidence required after a reopen, officer emails hidden from citizens, 4-byte reference IDs, atomic escalation.
 
 ## 7. API (base `/api/v1`)
@@ -183,6 +194,10 @@ Also fixed from the code audit: unguessable image links, AI triage awaited (work
 | GET / POST | `/admin/users` | Admin (create officers/admins) |
 | PATCH | `/admin/departments/:id` (SLA hours) | Admin |
 | GET | `/cities`, `/departments?city=`, `/public/scorecard?city=`, `/public/risk-alerts?city=` | Public |
+| GET | `/public/track/:ref` (status milestones only) | Public |
+| GET | `/geo/pincode/:pin`, `/geo/reverse?lat=&lng=`, `/geo/search?q=` (cached India Post / OpenStreetMap lookups) | Public, rate-limited |
+| GET / PATCH | `/profile` (stats, level, badges, activity / edit name, phone, language, city) | Signed in |
+| POST | `/profile/password` | Signed in |
 | GET | `/public/open-data.csv`, `/public/open-data.json` | Public (anonymised) |
 | GET | `/jobs/sla` | Vercel Cron (`Authorization: Bearer CRON_SECRET`) |
 | GET / POST | `/open311/v2/services.json`, `/open311/v2/requests.json`, `/open311/v2/requests/:id.json` (outside `/api/v1`) | Public read; create needs an `api_key` from `OPEN311_API_KEYS` |

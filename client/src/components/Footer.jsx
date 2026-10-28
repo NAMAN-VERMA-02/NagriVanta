@@ -24,6 +24,10 @@ export default function Footer() {
             <li><Link className={linkCls} to="/my-reports">{t('nav.mine')}</Link></li>
             <li><Link className={linkCls} to="/community">{t('nav.community')}</Link></li>
             <li><Link className={linkCls} to="/scorecard">{t('nav.scorecard')}</Link></li>
+            <li><Link className={linkCls} to="/track">{t('nav.track')}</Link></li>
+            <li><Link className={linkCls} to="/how-it-works">{t('nav.guide')}</Link></li>
+            <li><Link className={linkCls} to="/faq">{t('nav.faq')}</Link></li>
+            <li><Link className={linkCls} to="/about">{t('nav.about')}</Link></li>
           </ul>
         </div>
         <div>

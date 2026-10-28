@@ -1,10 +1,10 @@
 export const CATEGORIES = [
-  { value: 'road', label: 'Road / pothole', emoji: '🛣️' },
-  { value: 'garbage', label: 'Garbage / waste', emoji: '🗑️' },
-  { value: 'water', label: 'Water supply / leak', emoji: '🚰' },
-  { value: 'streetlight', label: 'Streetlight', emoji: '💡' },
-  { value: 'drainage', label: 'Drainage / sewer', emoji: '🌊' },
-  { value: 'other', label: 'Other', emoji: '📍' },
+  { value: 'road', label: 'Road / pothole' },
+  { value: 'garbage', label: 'Garbage / waste' },
+  { value: 'water', label: 'Water supply / leak' },
+  { value: 'streetlight', label: 'Streetlight' },
+  { value: 'drainage', label: 'Drainage / sewer' },
+  { value: 'other', label: 'Other' },
 ];
 export const categoryLabel = (v) => CATEGORIES.find((c) => c.value === v)?.label || v;
 

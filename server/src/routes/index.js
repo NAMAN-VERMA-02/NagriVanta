@@ -7,6 +7,7 @@ import * as auth from '../controllers/auth.js';
 import * as complaints from '../controllers/complaints.js';
 import * as admin from '../controllers/admin.js';
 import * as open311 from '../controllers/open311.js';
+import * as profile from '../controllers/profile.js';
 import { escalateOverdue } from '../jobs/sla.js';
 import { chat } from '../services/assistant.js';
 import { retryPendingTriage } from '../services/complaints.js';
@@ -34,6 +35,18 @@ r.get('/public/risk-alerts', admin.risk);
 r.get('/public/open-data.:format', admin.openDataExport);
 r.get('/departments', admin.departments);
 r.get('/cities', admin.cities);
+r.get('/public/track/:ref', limit(60 * 1000, 30), profile.track);
+
+// geocoding helpers (free OpenStreetMap / India Post services, cached)
+const geoLimiter = limit(60 * 1000, 30);
+r.get('/geo/pincode/:pin', geoLimiter, profile.pincode);
+r.get('/geo/reverse', geoLimiter, profile.reverse);
+r.get('/geo/search', geoLimiter, profile.search);
+
+// profile
+r.get('/profile', requireAuth, profile.getProfile);
+r.patch('/profile', requireAuth, profile.updateProfile);
+r.post('/profile/password', requireAuth, authLimiter, profile.changePassword);
 
 // AI civic assistant (chat channel); signed-in users can also look up their own cases
 r.post('/assistant/chat', chatLimiter, optionalAuth, async (req, res) => ok(res, await chat(chatSchema.parse(req.body), req.user)));
