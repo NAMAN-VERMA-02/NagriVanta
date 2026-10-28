@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "CivicLens",
+    "slug": "civiclens",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.civiclens.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f766e",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.civiclens.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CivicLens uses your location to pin the issue you are reporting."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CivicLens lets you attach photos of the issue.",
+          "cameraPermission": "CivicLens lets you take a photo of the issue."
+        }
+      ]
+    ],
+    "scheme": "civiclens"
+  }
+}
