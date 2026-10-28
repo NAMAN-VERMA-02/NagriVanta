@@ -295,14 +295,15 @@ export default function ComplaintDetail() {
                   {c.resolution.evidence.map((e) => <figure key={e} className="text-center text-xs text-slate-500"><img src={imageUrl(e)} alt="After-fix evidence" className="h-32 w-32 rounded-lg object-cover ring-2 ring-emerald-500" /><figcaption className="mt-1">After</figcaption></figure>)}
                 </div>
               )}
-              {c.resolution.verification && (
+              {/* older resolutions have an empty verification object (no status): show nothing for them */}
+              {c.resolution.verification?.status && (
                 <div className={`mt-4 rounded-xl border p-3 ${c.resolution.verification.status === 'needs_review' ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40'}`}>
                   <p className="flex items-center gap-2 text-sm font-semibold">
                     {c.resolution.verification.status === 'needs_review' ? <ShieldAlert className="h-4 w-4 text-amber-600" aria-hidden /> : <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />}
                     Evidence verification: {c.resolution.verification.status.replace('_', ' ')}
                   </p>
                   <ul className="mt-2 space-y-1 text-xs">
-                    {c.resolution.verification.checks.map((ch) => (
+                    {(c.resolution.verification.checks || []).map((ch) => (
                       <li key={ch.name} className="flex gap-2"><span aria-hidden>{ch.ok === true ? '✅' : ch.ok === false ? '⚠️' : '➖'}</span><span><b>{ch.name}:</b> {ch.detail}</span></li>
                     ))}
                   </ul>
