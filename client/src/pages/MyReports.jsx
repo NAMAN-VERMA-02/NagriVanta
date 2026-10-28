@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 import { CategoryBadge, Empty, ErrorBox, PageTitle, Spinner, StatusBadge } from '../components/ui';
+import { usePrefs } from '../context/PrefsContext';
 import { api, imageUrl } from '../services/api';
 import { fmtDay } from '../utils/format';
 
 export default function MyReports() {
+  const { t } = usePrefs();
   const [items, setItems] = useState(null);
   const [meta, setMeta] = useState({ page: 1, total: 0, limit: 20 });
   const [page, setPage] = useState(1);
@@ -17,10 +19,10 @@ export default function MyReports() {
 
   return (
     <>
-      <PageTitle title="My reports" subtitle="Everything you have reported, newest first." actions={<Link to="/report" className="btn-primary">New report</Link>} />
+      <PageTitle title={t('mine.title')} subtitle={t('mine.sub')} actions={<Link to="/report" className="btn-primary">{t('mine.new')}</Link>} />
       <ErrorBox error={error} />
       {!items && !error && <Spinner />}
-      {items?.length === 0 && <Empty title="No reports yet">Spotted a pothole or overflowing drain? <Link className="font-semibold text-brand-700" to="/report">Report it</Link>.</Empty>}
+      {items?.length === 0 && <Empty title={t('mine.empty')}>Spotted a pothole or overflowing drain? <Link className="font-semibold text-brand-700" to="/report">Report it</Link>.</Empty>}
       {items?.length > 0 && (
         <ul className="space-y-3">
           {items.map((c) => (

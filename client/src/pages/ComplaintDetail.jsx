@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ArrowLeft, Clock, Lock, MapPin, Sparkles, Star } from 'lucide-react';
+import { ArrowLeft, Clock, Lock, MapPin, ShieldAlert, ShieldCheck, Sparkles, Star, ThumbsUp } from 'lucide-react';
 import { PointsMap } from '../components/Maps';
 import { CategoryBadge, ErrorBox, PriorityBadge, Spinner, StatusBadge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
@@ -31,7 +31,7 @@ function AiCard({ ai, isStaff }) {
   return (
     <div className="space-y-2 text-sm">
       <p className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
-        {ai.status === 'done' ? 'AI suggestion' : 'Rule-based suggestion'} · awaiting staff review
+        {ai.engine === 'gemini' ? `Gemini AI${ai.usedImage ? ' (text + photo)' : ''}` : ai.engine === 'naive-bayes' ? 'Trained model (offline)' : 'Rule-based'} suggestion · awaiting staff review
       </p>
       {ai.summary && <p className="italic">“{ai.summary}”</p>}
       <dl className="grid grid-cols-2 gap-2">
@@ -83,13 +83,13 @@ function StaffPanel({ d, reload, user }) {
   const isAdmin = user.role === 'admin';
 
   useEffect(() => {
-    api('/departments').then(({ data }) => setDepts(data)).catch(() => {});
+    api('/departments', { query: { city: c.city } }).then(({ data }) => setDepts(data)).catch(() => {});
     if (isAdmin) api('/admin/users', { query: { role: 'officer' } }).then(({ data }) => setOfficers(data)).catch(() => {});
-  }, [isAdmin]);
+  }, [isAdmin, c.city]);
 
   useEffect(() => { setStatus((s) => ({ ...s, to: d.allowedTransitions[0] || '' })); }, [d.allowedTransitions]);
 
-  const suggestedDept = depts.find((x) => x.categories.includes(c.category));
+  const suggestedDept = depts.find((x) => String(x._id) === String(c.routing?.suggestedDepartmentId)) || depts.find((x) => x.categories.includes(c.category));
 
   return (
     <div className="space-y-4">
@@ -122,7 +122,7 @@ function StaffPanel({ d, reload, user }) {
         <Section title="Assign department">
           <form className="space-y-3" onSubmit={(e) => {
             e.preventDefault();
-            run(() => api(`/complaints/${c._id}/assign`, { method: 'PATCH', body: { departmentId: assign.departmentId, assignedTo: assign.assignedTo || undefined, dueAt: assign.dueAt || undefined, note: assign.note || undefined } }));
+            run(() => api(`/complaints/${c._id}/assign`, { method: 'PATCH', body: { departmentId: assign.departmentId, assignedTo: assign.assignedTo || undefined, dueAt: assign.dueAt ? new Date(assign.dueAt).toISOString() : undefined, note: assign.note || undefined } }));
           }}>
             <div>
               <label className="label" htmlFor="adept">Department {suggestedDept && <span className="font-normal text-slate-500">(suggested: {suggestedDept.name})</span>}</label>
@@ -234,7 +234,8 @@ export default function ComplaintDetail() {
   const [d, setD] = useState(null);
   const [error, setError] = useState(null);
   const load = useCallback(() => api(`/complaints/${id}`).then(({ data }) => setD(data)).catch(setError), [id]);
-  useEffect(() => { load(); }, [load]);
+  // light polling keeps the timeline live without websockets (which serverless hosting does not keep open)
+  useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
 
   if (error) return <ErrorBox error={error} />;
   if (!d) return <Spinner />;
@@ -268,23 +269,44 @@ export default function ComplaintDetail() {
             <p className="whitespace-pre-line text-slate-700 dark:text-slate-300">{c.description}</p>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div><dt className="text-xs text-slate-500">Reported</dt><dd>{fmtDate(c.createdAt)}{c.reportedBy?.name ? ` by ${c.reportedBy.name}` : ''}</dd></div>
-              <div><dt className="text-xs text-slate-500">Ward</dt><dd>{c.ward || '—'}</dd></div>
+              <div><dt className="text-xs text-slate-500">Ward / city</dt><dd>{[c.ward, c.city].filter(Boolean).join(', ') || '—'}</dd></div>
+              <div><dt className="text-xs text-slate-500">Channel</dt><dd className="capitalize">{c.source}{c.locationSource === 'photo' ? ' · location from photo GPS' : ''}</dd></div>
+              {c.media?.takenAt && <div><dt className="text-xs text-slate-500">Photo taken</dt><dd>{fmtDate(c.media.takenAt)}</dd></div>}
               {c.address && <div><dt className="text-xs text-slate-500">Landmark</dt><dd>{c.address}</dd></div>}
               {c.departmentId?.name && <div><dt className="text-xs text-slate-500">Department</dt><dd>{c.departmentId.name}{c.assignedTo?.name ? ` · ${c.assignedTo.name}` : ''}</dd></div>}
+              <div><dt className="text-xs text-slate-500">Community support</dt><dd className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" aria-hidden /> {c.upvotes || 0}</dd></div>
             </dl>
-            {c.images?.length > 0 && (
+            {(c.images?.length > 0 || c.videos?.length > 0) && (
               <div className="mt-4 flex flex-wrap gap-3">
-                {c.images.map((src) => <a key={src} href={imageUrl(src)} target="_blank" rel="noreferrer"><img src={imageUrl(src)} alt="Reported issue" className="h-32 w-32 rounded-lg object-cover" /></a>)}
+                {c.images?.map((src) => <a key={src} href={imageUrl(src)} target="_blank" rel="noreferrer"><img src={imageUrl(src)} alt="Reported issue" className="h-32 w-32 rounded-lg object-cover" /></a>)}
+                {c.videos?.map((src) => <video key={src} src={imageUrl(src)} controls preload="metadata" className="h-32 max-w-xs rounded-lg bg-black" aria-label="Reported issue video" />)}
               </div>
             )}
+            {isStaff && c.routing?.reason && <p className="mt-4 rounded-lg bg-slate-50 p-2 text-xs text-slate-600 dark:bg-ink-800 dark:text-slate-300">Routing{c.routing.method === 'auto' ? ' (automatic)' : ''}: {c.routing.reason}</p>}
           </Section>
 
           {c.resolution?.note && (
-            <Section title="Resolution">
+            <Section title="Resolution & evidence check">
               <p className="text-sm">{c.resolution.note}</p>
               <p className="mt-1 text-xs text-slate-500">Resolved {fmtDate(c.resolution.resolvedAt)}</p>
               {c.resolution.evidence?.length > 0 && (
-                <div className="mt-3 flex gap-3">{c.resolution.evidence.map((e) => <img key={e} src={imageUrl(e)} alt="After-fix evidence" className="h-32 w-32 rounded-lg object-cover" />)}</div>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {c.images?.[0] && <figure className="text-center text-xs text-slate-500"><img src={imageUrl(c.images[0])} alt="Before" className="h-32 w-32 rounded-lg object-cover" /><figcaption className="mt-1">Before</figcaption></figure>}
+                  {c.resolution.evidence.map((e) => <figure key={e} className="text-center text-xs text-slate-500"><img src={imageUrl(e)} alt="After-fix evidence" className="h-32 w-32 rounded-lg object-cover ring-2 ring-emerald-500" /><figcaption className="mt-1">After</figcaption></figure>)}
+                </div>
+              )}
+              {c.resolution.verification && (
+                <div className={`mt-4 rounded-xl border p-3 ${c.resolution.verification.status === 'needs_review' ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40'}`}>
+                  <p className="flex items-center gap-2 text-sm font-semibold">
+                    {c.resolution.verification.status === 'needs_review' ? <ShieldAlert className="h-4 w-4 text-amber-600" aria-hidden /> : <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />}
+                    Evidence verification: {c.resolution.verification.status.replace('_', ' ')}
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {c.resolution.verification.checks.map((ch) => (
+                      <li key={ch.name} className="flex gap-2"><span aria-hidden>{ch.ok === true ? '✅' : ch.ok === false ? '⚠️' : '➖'}</span><span><b>{ch.name}:</b> {ch.detail}</span></li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </Section>
           )}
@@ -294,6 +316,10 @@ export default function ComplaintDetail() {
           </Section>
 
           <Section title="Timeline">
+            <p className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${d.integrity?.intact ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'}`}>
+              {d.integrity?.intact ? <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> : <ShieldAlert className="h-3.5 w-3.5" aria-hidden />}
+              {d.integrity?.intact ? `Tamper-evident record intact (${d.integrity.entries} hash-chained entries)` : 'Audit record altered: integrity check failed'}
+            </p>
             <Timeline history={d.history} />
           </Section>
         </div>

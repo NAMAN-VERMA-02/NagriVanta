@@ -2,6 +2,7 @@ import { router, usePathname } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
+import { usePrefs } from '../lib/prefs';
 import { STATUS_COLOR, useTheme } from '../lib/theme';
 
 export const STATUS_LABEL = {
@@ -13,10 +14,11 @@ export const STATUS_LABEL = {
 export function AppHeader() {
   const { c, scheme, toggle } = useTheme();
   const { user, logout } = useAuth();
+  const { t, lang, toggleLang } = usePrefs();
   const path = usePathname();
   const links = user?.role === 'citizen'
-    ? [['/reports', 'My reports'], ['/report', 'Report']]
-    : user ? [['/queue', 'Queue']] : [];
+    ? [['/reports', t('myReports')], ['/report', t('report')], ['/community', t('nearby')], ['/chat', t('chat')]]
+    : user ? [['/queue', t('queue')], ['/chat', t('chat')]] : [['/chat', t('chat')]];
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: c.card, borderBottomWidth: 1, borderColor: c.border }}>
       <View style={s.headerRow}>
@@ -25,12 +27,15 @@ export function AppHeader() {
           <Text style={[s.brandText, { color: c.text }]}>Civic<Text style={{ color: c.brand }}>Lens</Text></Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Pressable onPress={toggleLang} style={[s.iconBtn, { borderColor: c.border }]} accessibilityRole="button" accessibilityLabel={lang === 'en' ? 'हिंदी में देखें' : 'View in English'}>
+            <Text style={{ color: c.text, fontWeight: '700', fontSize: 13 }}>{lang === 'en' ? 'हिं' : 'EN'}</Text>
+          </Pressable>
           <Pressable onPress={toggle} style={[s.iconBtn, { borderColor: c.border }]} accessibilityRole="button" accessibilityLabel={scheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             <Text style={{ fontSize: 18 }}>{scheme === 'dark' ? '☀️' : '🌙'}</Text>
           </Pressable>
           {user && (
             <Pressable onPress={async () => { await logout(); router.replace('/'); }} style={[s.iconBtn, { borderColor: c.border }]} accessibilityRole="button" accessibilityLabel="Sign out">
-              <Text style={{ color: c.text, fontSize: 12, fontWeight: '600' }}>Out</Text>
+              <Text style={{ color: c.text, fontSize: 12, fontWeight: '600' }}>{t('signOut')}</Text>
             </Pressable>
           )}
         </View>
@@ -153,7 +158,7 @@ const s = StyleSheet.create({
   logo: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   brandText: { fontSize: 18, fontWeight: '800' },
   iconBtn: { minWidth: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-  nav: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingBottom: 8 },
+  nav: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingBottom: 8 },
   navItem: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 },
   footer: { borderTopWidth: 1, marginTop: 24, paddingTop: 16 },
 });

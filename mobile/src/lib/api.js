@@ -18,7 +18,9 @@ export async function api(path, { method = 'GET', body, query } = {}) {
   try {
     res = await fetch(`${API_URL}/api/v1${path}${qs}`, { method, headers, body: isForm ? body : body && JSON.stringify(body) });
   } catch {
-    throw new Error(`Cannot reach the server at ${API_URL}. Is it running and is EXPO_PUBLIC_API_URL your computer's LAN IP?`);
+    const e = new Error(`Cannot reach the server at ${API_URL}. Check your connection (and that EXPO_PUBLIC_API_URL is your computer's LAN IP in development).`);
+    e.network = true;
+    throw e;
   }
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) {

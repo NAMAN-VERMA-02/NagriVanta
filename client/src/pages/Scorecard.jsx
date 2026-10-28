@@ -1,18 +1,32 @@
 import { useEffect, useState } from 'react';
+import { Download, Plug } from 'lucide-react';
 import { HBar } from '../components/Charts';
+import { CityFilter, HotspotTable, RiskAlerts } from '../components/Insights';
 import { MapLegend, PointsMap } from '../components/Maps';
 import { ErrorBox, PageTitle, Spinner } from '../components/ui';
-import { api } from '../services/api';
+import { API_ORIGIN, api } from '../services/api';
 import { categoryLabel, fmtDate } from '../utils/format';
 
 export default function Scorecard() {
+  const [city, setCity] = useState('');
   const [d, setD] = useState(null);
   const [error, setError] = useState(null);
-  useEffect(() => { api('/public/scorecard').then(({ data }) => setD(data)).catch(setError); }, []);
+  useEffect(() => { setD(null); api('/public/scorecard', { query: { city } }).then(({ data }) => setD(data)).catch(setError); }, [city]);
+  const q = city ? `?city=${encodeURIComponent(city)}` : '';
 
   return (
     <>
-      <PageTitle title="Public ward scorecard" subtitle="Aggregate, privacy-safe numbers anyone can check. No personal details are published." />
+      <PageTitle
+        title="Public transparency dashboard"
+        subtitle="Aggregate, privacy-safe numbers anyone can check. No personal details are published."
+        actions={(
+          <div className="flex flex-wrap items-end gap-2">
+            <CityFilter value={city} onChange={setCity} />
+            <a className="btn-secondary" href={`${API_ORIGIN}/api/v1/public/open-data.csv${q}`}><Download className="h-4 w-4" aria-hidden /> CSV</a>
+            <a className="btn-secondary" href={`${API_ORIGIN}/api/v1/public/open-data.json${q}`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" aria-hidden /> JSON</a>
+          </div>
+        )}
+      />
       <ErrorBox error={error} />
       {!d && !error && <Spinner />}
       {d && (
@@ -32,7 +46,12 @@ export default function Scorecard() {
                     {w.suppressed ? <td colSpan={4} className="px-4 py-3 text-right text-slate-400">Too few reports to publish</td> : (
                       <>
                         <td className="px-4 py-3 text-right tabular-nums">{w.total}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{w.resolvedPct}%</td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-slate-200 sm:inline-block dark:bg-slate-700"><span className="block h-full bg-emerald-500" style={{ width: `${w.resolvedPct}%` }} /></span>
+                            {w.resolvedPct}%
+                          </span>
+                        </td>
                         <td className={`px-4 py-3 text-right tabular-nums ${w.overduePct > 20 ? 'font-semibold text-red-600' : ''}`}>{w.overduePct}%</td>
                         <td className="px-4 py-3 text-right tabular-nums">{w.medianResolutionHours != null ? `${w.medianResolutionHours} h` : '—'}</td>
                       </>
@@ -42,17 +61,34 @@ export default function Scorecard() {
               </tbody>
             </table>
           </section>
+
+          <RiskAlerts city={city} />
+
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="card p-5">
               <h2 className="mb-3 font-semibold">Reports by category</h2>
               <HBar data={Object.entries(d.byCategory).map(([k, v]) => ({ name: categoryLabel(k), value: v })).sort((a, b) => b.value - a.value)} label="Reports" />
             </section>
             <section className="card p-5">
-              <h2 className="mb-3 font-semibold">Where issues are reported</h2>
-              <PointsMap points={d.points} height={280} />
+              <h2 className="mb-3 font-semibold">Where issues recur</h2>
+              <PointsMap points={d.points} hotspots={d.hotspots} height={280} />
               <MapLegend />
             </section>
           </div>
+          <section className="card p-5">
+            <h2 className="mb-3 font-semibold">Recurring hotspots (90 days)</h2>
+            <HotspotTable hotspots={d.hotspots} />
+          </section>
+          <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+            <Plug className="h-8 w-8 shrink-0 text-brand-700 dark:text-brand-500" aria-hidden />
+            <div className="text-sm">
+              <p className="font-semibold">Integration for other government systems</p>
+              <p className="text-slate-600 dark:text-slate-400">
+                Standard <a className="underline" href={`${API_ORIGIN}/open311/v2/services.json`} target="_blank" rel="noreferrer">Open311 GeoReport v2 API</a> to read and file cases with one shared case ID,
+                signed webhooks for status changes, and open data under CC BY 4.0.
+              </p>
+            </div>
+          </section>
           <p className="text-xs text-slate-500">Resolved = resolved or closed. Overdue = still open after its SLA due date. Median fix time = submission to resolution. Demo data is synthetic.</p>
         </div>
       )}

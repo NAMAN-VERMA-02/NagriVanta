@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
-import { CATEGORIES, DEFAULT_SLA_HOURS } from '../config/constants.js';
+import { CATEGORIES, CITY_NAMES, DEFAULT_SLA_HOURS } from '../config/constants.js';
 
 const departmentSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  code: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  code: { type: String, required: true },
+  city: { type: String, enum: CITY_NAMES, default: CITY_NAMES[0] },
   description: String,
   categories: [{ type: String, enum: CATEGORIES }],
   slaHours: {
@@ -14,5 +15,7 @@ const departmentSchema = new mongoose.Schema({
   },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
+
+departmentSchema.index({ city: 1, code: 1 }, { unique: true });
 
 export default mongoose.model('Department', departmentSchema);

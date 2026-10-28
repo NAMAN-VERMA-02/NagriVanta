@@ -30,7 +30,8 @@ export function Login() {
     setBusy(true); setError(null);
     try {
       const user = await login(form);
-      navigate(location.state?.from || home(user.role), { replace: true });
+      // keep an assistant draft so the report form opens pre-filled after sign-in
+      navigate(location.state?.from || home(user.role), { replace: true, state: location.state?.draft ? { draft: location.state.draft } : undefined });
     } catch (err) { setError(err); } finally { setBusy(false); }
   };
 
@@ -54,7 +55,8 @@ export function Login() {
         <p className="mt-2">Password for all: <code>Demo@12345</code></p>
         <ul className="mt-1 space-y-0.5">
           <li>Admin: admin@civiclens.local</li>
-          <li>Officer: pwd.officer@civiclens.local (also san, jal, ele, drn)</li>
+          <li>Officer (Ghaziabad): pwd.officer@civiclens.local (also san, jal, ele, drn)</li>
+          <li>Officer (Noida): noida.pwd.officer@civiclens.local</li>
           <li>Citizen: citizen1@civiclens.local</li>
         </ul>
       </details>

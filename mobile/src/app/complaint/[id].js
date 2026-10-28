@@ -131,7 +131,7 @@ export default function ComplaintDetail() {
 
       {ai && ai.status !== 'pending' && (
         <Card>
-          <T bold size={13} style={{ color: '#b45309' }}>{ai.status === 'done' ? 'AI suggestion' : 'Rule-based suggestion'} · awaiting staff review</T>
+          <T bold size={13} style={{ color: '#b45309' }}>{ai.engine === 'gemini' ? 'AI suggestion' : 'Offline model suggestion'} · awaiting staff review</T>
           {ai.summary && <T style={{ fontStyle: 'italic' }}>“{ai.summary}”</T>}
           <T muted size={13}>Category {ai.category} · priority {ai.priority}{ai.confidence != null ? ` · ${Math.round(ai.confidence * 100)}%` : ''}</T>
         </Card>

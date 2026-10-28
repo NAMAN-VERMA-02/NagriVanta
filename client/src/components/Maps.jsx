@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { usePrefs } from '../context/PrefsContext';
 import { categoryLabel } from '../utils/format';
 
 export const DEFAULT_CENTER = [28.6692, 77.4538]; // Ghaziabad
@@ -7,6 +8,8 @@ export const DEFAULT_CENTER = [28.6692, 77.4538]; // Ghaziabad
 const CAT_COLOR = { road: '#ea580c', garbage: '#65a30d', water: '#0284c7', streetlight: '#ca8a04', drainage: '#7c3aed', other: '#64748b' };
 
 function Tiles() {
+  const { lite } = usePrefs();
+  if (lite) return null; // Lite mode: skip map tiles, the heaviest download on the page
   return <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />;
 }
 
@@ -37,7 +40,7 @@ export function MapPicker({ value, onChange, height = 320 }) {
 }
 
 // Read-only map of many points, coloured by category.
-export function PointsMap({ points = [], height = 380, center }) {
+export function PointsMap({ points = [], hotspots = [], height = 380, center }) {
   const c = center || (points[0] ? [points[0].lat, points[0].lng] : DEFAULT_CENTER);
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800" style={{ height }}>
@@ -47,6 +50,13 @@ export function PointsMap({ points = [], height = 380, center }) {
           <CircleMarker key={i} center={[p.lat, p.lng]} radius={p.priority === 'critical' || p.priority === 'high' ? 8 : 6}
             pathOptions={{ color: CAT_COLOR[p.category] || '#64748b', fillOpacity: 0.55, weight: 1 }}>
             <Tooltip>{categoryLabel(p.category)}{p.status ? ` · ${p.status.replace('_', ' ')}` : ''}</Tooltip>
+          </CircleMarker>
+        ))}
+        {/* recurrence hotspots: ring size grows with the number of repeat reports */}
+        {hotspots.map((h) => (
+          <CircleMarker key={`h${h.lat},${h.lng},${h.category}`} center={[h.lat, h.lng]} radius={10 + Math.min(20, h.count * 2)}
+            pathOptions={{ color: '#dc2626', weight: 2, fillColor: '#ef4444', fillOpacity: 0.15, dashArray: '4 4' }}>
+            <Tooltip>Hotspot: {h.count} × {categoryLabel(h.category)}</Tooltip>
           </CircleMarker>
         ))}
       </MapContainer>

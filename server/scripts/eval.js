@@ -1,44 +1,21 @@
-// Evaluates category triage on labelled data. Uses Gemini if GEMINI_API_KEY is set, else the rules.
-// Usage: npm run eval -- [--nyc-limit 200]
-// Reports sample size, accuracy, per-class precision/recall and latency. No database needed.
-import fs from 'node:fs';
+// Evaluates category triage on HELD-OUT data (never used by `npm run train`).
+// Compares keyword rules, the trained Naive Bayes model, and Gemini when GEMINI_API_KEY works.
+// Usage: npm run eval -- [--nyc-limit 300]
 import { CATEGORIES } from '../src/config/constants.js';
-import { aiEnabled, triage } from '../src/services/ai.js';
+import { aiEnabled, localTriage, triage } from '../src/services/ai.js';
+import { ruleCategory } from '../src/services/rules.js';
+import { loadIndia, loadNyc } from './train.js';
 
-const nycLimit = Number(process.argv[process.argv.indexOf('--nyc-limit') + 1]) || 200;
+const nycLimit = Number(process.argv[process.argv.indexOf('--nyc-limit') + 1]) || 300;
 
-const NYC_MAP = {
-  'Street Condition': 'road', 'Street Light Condition': 'streetlight', Sewer: 'drainage',
-  'Dirty Condition': 'garbage', 'Illegal Dumping': 'garbage', 'Missed Collection': 'garbage', 'Water System': 'water',
-};
-
-function loadIndia() {
-  const { items } = JSON.parse(fs.readFileSync(new URL('../../data/civic_labelled_india.json', import.meta.url), 'utf8'));
-  // the generator repeats templates, so evaluate each distinct text once
-  const seen = new Set();
-  return items.filter((i) => !seen.has(i.title) && seen.add(i.title)).map((i) => ({ title: i.title, description: i.description, label: i.label.category }));
-}
-
-function loadNyc() {
-  const lines = fs.readFileSync(new URL('../../data/nyc311_sample.csv', import.meta.url), 'utf8').trim().split('\n').slice(1);
-  const rows = lines.map((l) => l.split(',').map((s) => s.replace(/^"|"$/g, '')))
-    .filter((r) => NYC_MAP[r[4]] && r[5])
-    // only the descriptor is shown to the classifier; complaint_type is the label
-    .map((r) => ({ title: r[5], description: r[5], label: NYC_MAP[r[4]] }));
-  const step = Math.max(1, Math.floor(rows.length / nycLimit));
-  return rows.filter((_, i) => i % step === 0).slice(0, nycLimit);
-}
-
-async function evaluate(name, rows) {
+function report(name, rows, predictFn) {
   const confusion = {};
-  const latencies = [];
   let correct = 0;
   for (const r of rows) {
-    const out = await triage(r.title, r.description);
-    latencies.push(out.latencyMs);
-    if (out.category === r.label) correct += 1;
+    const got = predictFn(r);
+    if (got === r.label) correct += 1;
     confusion[r.label] ??= {};
-    confusion[r.label][out.category] = (confusion[r.label][out.category] || 0) + 1;
+    confusion[r.label][got] = (confusion[r.label][got] || 0) + 1;
   }
   const perClass = CATEGORIES.map((c) => {
     const tp = confusion[c]?.[c] || 0;
@@ -46,12 +23,27 @@ async function evaluate(name, rows) {
     const actual = Object.values(confusion[c] || {}).reduce((s, n) => s + n, 0);
     return { category: c, n: actual, precision: predicted ? +(tp / predicted).toFixed(2) : null, recall: actual ? +(tp / actual).toFixed(2) : null };
   }).filter((x) => x.n);
-  const sorted = latencies.sort((a, b) => a - b);
-  console.log(`\n=== ${name}: n=${rows.length}, engine=${aiEnabled() ? 'gemini' : 'rules'} ===`);
-  console.log(`accuracy ${(100 * correct / rows.length).toFixed(1)}%  latency p50 ${sorted[Math.floor(sorted.length * 0.5)]}ms p95 ${sorted[Math.floor(sorted.length * 0.95)]}ms`);
-  console.table(perClass);
+  console.log(`  ${name.padEnd(22)} accuracy ${(100 * correct / rows.length).toFixed(1)}%`);
+  return perClass;
 }
 
-await evaluate('India synthetic (distinct templates)', loadIndia());
-await evaluate('NYC 311 descriptors (real)', loadNyc());
-console.log('\nCaveats: the India set is small and synthetic; NYC descriptors are short and US-specific. Report these numbers with their n.');
+async function evaluate(title, rows) {
+  console.log(`\n=== ${title}: n=${rows.length} (held out) ===`);
+  report('keyword rules', rows, (r) => ruleCategory(r.text).category);
+  const table = report('naive bayes + rules', rows, (r) => localTriage(r.text, '').category);
+  if (aiEnabled()) {
+    const preds = [];
+    for (const r of rows.slice(0, 50)) preds.push({ ...r, got: (await triage(r.text, r.text)).category });
+    report('gemini (first 50)', preds, (r) => r.got);
+  }
+  console.table(table);
+}
+
+const india = loadIndia().filter((d) => d.holdout);
+const nycAll = loadNyc().filter((d) => d.holdout);
+const step = Math.max(1, Math.floor(nycAll.length / nycLimit));
+const nyc = nycAll.filter((_, i) => i % step === 0).slice(0, nycLimit);
+
+await evaluate('India synthetic', india);
+await evaluate('NYC 311 descriptors (real)', nyc);
+console.log('\nCaveats: the India hold-out is tiny and synthetic; NYC descriptors are short and US-specific. Quote numbers with their n.');

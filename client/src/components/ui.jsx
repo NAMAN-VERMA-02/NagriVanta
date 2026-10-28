@@ -1,9 +1,12 @@
 import { CircleAlert, LoaderCircle } from 'lucide-react';
+import { usePrefs } from '../context/PrefsContext';
+import { CATEGORY_HI, STATUS_HI } from '../i18n';
 import { PRIORITY, STATUS, categoryLabel } from '../utils/format';
 
 export function StatusBadge({ status }) {
+  const { lang } = usePrefs();
   const s = STATUS[status] || { label: status, cls: '' };
-  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${s.cls}`}>{s.label}</span>;
+  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${s.cls}`}>{lang === 'hi' ? STATUS_HI[status] || s.label : s.label}</span>;
 }
 
 export function PriorityBadge({ priority }) {
@@ -11,7 +14,8 @@ export function PriorityBadge({ priority }) {
 }
 
 export function CategoryBadge({ category }) {
-  return <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-800 dark:bg-brand-800/30 dark:text-brand-100">{categoryLabel(category)}</span>;
+  const { lang } = usePrefs();
+  return <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-800 dark:bg-brand-800/30 dark:text-brand-100">{lang === 'hi' ? CATEGORY_HI[category] || category : categoryLabel(category)}</span>;
 }
 
 export function Spinner({ label = 'Loading…' }) {

@@ -3,11 +3,17 @@ import ComplaintHistory from '../models/ComplaintHistory.js';
 import Department from '../models/Department.js';
 import Feedback from '../models/Feedback.js';
 import User from '../models/User.js';
-import { ACTIVE_STATUSES, ASSIGNABLE_FROM, DEFAULT_SLA_HOURS, REOPENABLE_FROM, REOPEN_WINDOW_DAYS } from '../config/constants.js';
-import { saveUploads } from '../middleware/upload.js';
-import { createComplaint, toCitizenView, toPublicView, triageInBackground } from '../services/complaints.js';
+import Vote from '../models/Vote.js';
+import { ACTIVE_STATUSES, ASSIGNABLE_FROM, REOPENABLE_FROM, REOPEN_WINDOW_DAYS } from '../config/constants.js';
+import { saveMedia } from '../middleware/upload.js';
+import { createComplaint, processNewComplaint, toCitizenView, toPublicView } from '../services/complaints.js';
 import { findDuplicates } from '../services/duplicates.js';
-import { allowedNext, applyTransition, canOfficerAct, notify, recordHistory, STATUS_LABEL } from '../services/workflow.js';
+import { slaDueAt } from '../services/routing.js';
+import { scorePriority } from '../services/rules.js';
+import { verifyEvidence } from '../services/verification.js';
+import {
+  allowedNext, applyTransition, assertTransition, canOfficerAct, notify, recordHistory, STATUS_LABEL, verifyHistoryChain,
+} from '../services/workflow.js';
 import { badRequest, conflict, forbidden, notFound, ok, paginate } from '../utils/http.js';
 import {
   assignSchema, createComplaintSchema, feedbackSchema, listQuerySchema, nearbySchema, noteSchema, reopenSchema, reviewSchema, statusSchema,
@@ -20,7 +26,7 @@ async function loadForUser(id, user) {
   const c = await Complaint.findById(id)
     .populate('reportedBy', 'name email phone')
     .populate('assignedTo', 'name email')
-    .populate('departmentId', 'name code');
+    .populate('departmentId', 'name code city');
   if (!c) throw notFound('Complaint not found');
   if (user.role === 'citizen' && !isOwner(user, c)) throw notFound('Complaint not found');
   if (user.role === 'officer' && !canOfficerAct(user, { assignedTo: c.assignedTo?._id, departmentId: c.departmentId?._id })) throw forbidden();
@@ -29,9 +35,14 @@ async function loadForUser(id, user) {
 
 export async function create(req, res) {
   const input = createComplaintSchema.parse(req.body);
-  const complaint = await createComplaint(input, req.user, await saveUploads(req));
-  triageInBackground(complaint._id);
-  ok(res, toCitizenView(complaint), null, 201);
+  const media = await saveMedia(req);
+  if ((input.lat == null || input.lng == null) && media.exif?.lat == null) {
+    throw badRequest('Location is required: share your location, pick it on the map, or attach a photo with GPS');
+  }
+  const complaint = await createComplaint(input, req.user, media);
+  // awaited (not fire-and-forget) because serverless hosts may freeze the function after responding
+  const processed = await processNewComplaint(complaint._id);
+  ok(res, toCitizenView(processed), null, 201);
 }
 
 export async function mine(req, res) {
@@ -48,34 +59,47 @@ export async function list(req, res) {
   const q = listQuerySchema.parse(req.query);
   const { page, limit, skip } = paginate(req.query);
   const filter = {};
-  for (const k of ['status', 'category', 'priority', 'ward', 'departmentId']) if (q[k]) filter[k] = q[k];
+  for (const k of ['status', 'category', 'priority', 'ward', 'departmentId', 'city']) if (q[k]) filter[k] = q[k];
   if (q.from || q.to) filter.createdAt = { ...(q.from && { $gte: q.from }), ...(q.to && { $lte: q.to }) };
   if (q.overdue === 'true') Object.assign(filter, { status: { $in: ACTIVE_STATUSES }, 'sla.dueAt': { $lt: new Date() } });
   if (q.q) filter.$or = [{ title: new RegExp(escapeRegex(q.q), 'i') }, { referenceId: new RegExp(escapeRegex(q.q), 'i') }];
-
+  if (q.near) {
+    const [lat, lng] = q.near.split(',').map(Number);
+    filter.location = { $geoWithin: { $centerSphere: [[lng, lat], 3 / 6378.1] } }; // 3 km
+  }
   if (req.user.role === 'officer') {
     filter.$and = [{ $or: [{ assignedTo: req.user._id }, ...(req.user.departmentId ? [{ departmentId: req.user.departmentId }] : [])] }];
   }
-  const query = Complaint.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
+  const sort = q.sort === 'top' ? { upvotes: -1, createdAt: -1 } : { createdAt: -1 };
+  const query = Complaint.find(filter).sort(sort).skip(skip).limit(limit);
   if (req.user.role !== 'citizen') query.populate('assignedTo', 'name').populate('departmentId', 'name code');
   const [items, total] = await Promise.all([query, Complaint.countDocuments(filter)]);
-  // Citizens browsing the community list only get the public-safe subset.
-  ok(res, req.user.role === 'citizen' ? items.map(toPublicView) : items, { page, limit, total });
+  if (req.user.role !== 'citizen') return ok(res, items, { page, limit, total });
+
+  // Citizens browsing the community feed only get the public-safe subset, plus their own votes.
+  const voted = new Set((await Vote.find({ userId: req.user._id, complaintId: { $in: items.map((i) => i._id) } }, 'complaintId')).map((v) => String(v.complaintId)));
+  return ok(res, items.map((c) => ({ ...toPublicView(c), hasVoted: voted.has(String(c._id)), isMine: isOwner(req.user, c) })), { page, limit, total });
 }
 
 export async function getOne(req, res) {
   const c = await loadForUser(req.params.id, req.user);
   const staff = req.user.role !== 'citizen';
-  const [history, feedback] = await Promise.all([
-    ComplaintHistory.find({ complaintId: c._id, ...(!staff && { internal: false }) }).sort({ createdAt: 1 }).populate('actorId', 'name role'),
+  const [history, feedback, integrity] = await Promise.all([
+    ComplaintHistory.find({ complaintId: c._id, ...(!staff && { internal: false }) }).sort({ createdAt: 1, _id: 1 }).populate('actorId', 'name role'),
     Feedback.findOne({ complaintId: c._id }),
+    verifyHistoryChain(c._id),
   ]);
   const data = staff ? c.toObject() : toCitizenView(c);
   if (!staff) data.reportedBy = { name: c.reportedBy?.name };
   ok(res, {
     complaint: data,
-    history,
+    history: history.map((h) => {
+      const o = h.toObject();
+      delete o.prevHash;
+      return o;
+    }),
     feedback,
+    integrity: { intact: integrity.intact, entries: integrity.entries },
     allowedTransitions: allowedNext(c.status, req.user.role),
     canAssign: req.user.role === 'admin' && ASSIGNABLE_FROM.includes(c.status),
     canReopen: !staff && REOPENABLE_FROM.includes(c.status),
@@ -102,7 +126,15 @@ export async function changeStatus(req, res) {
   const body = statusSchema.parse(req.body);
   const c = await Complaint.findById(req.params.id);
   if (!c) throw notFound();
-  await applyTransition(c, body.to, req.user, { note: body.note, evidence: await saveUploads(req) });
+  // validate first, so a rejected request never leaves stored photos behind
+  assertTransition(c, body.to, req.user, { note: body.note, evidenceCount: (req.files || []).length });
+  const media = await saveMedia(req);
+  const verification = body.to === 'resolved' ? await verifyEvidence(c, media) : undefined;
+  await applyTransition(c, body.to, req.user, { note: body.note, evidence: media.images, evidenceSha256: media.sha256, verification });
+  if (verification?.status === 'needs_review') {
+    const admins = await User.find({ role: 'admin', isActive: true }, '_id');
+    await notify(admins.map((a) => a._id), c, 'verification', `Check evidence for ${c.referenceId}`, verification.checks.filter((x) => x.ok === false).map((x) => x.name).join(', '));
+  }
   ok(res, c);
 }
 
@@ -118,15 +150,15 @@ export async function assign(req, res) {
     if (!officer) throw badRequest('Assignee must be an active officer');
   }
   const from = c.status;
-  const hours = dept.slaHours?.[c.priority] ?? DEFAULT_SLA_HOURS[c.priority];
   c.departmentId = dept._id;
   c.assignedTo = body.assignedTo;
   c.status = 'assigned';
-  c.sla = { dueAt: body.dueAt || new Date(Date.now() + hours * 36e5) };
+  c.sla = { dueAt: body.dueAt || slaDueAt(dept, c.priority) };
+  c.routing = { ...c.routing?.toObject?.(), method: 'manual', reason: `Assigned by ${req.user.name}`, at: new Date() };
   await c.save();
   await recordHistory(c, req.user, 'assigned', {
     fromStatus: from, toStatus: 'assigned', note: body.note,
-    metadata: { department: dept.name, assignedTo: body.assignedTo, dueAt: c.sla.dueAt, slaHours: body.dueAt ? 'custom' : hours },
+    metadata: { department: dept.name, assignedTo: body.assignedTo, dueAt: c.sla.dueAt, slaHours: body.dueAt ? 'custom' : dept.slaHours?.[c.priority] },
   });
   await notify([c.reportedBy], c, 'status', `${c.referenceId}: Assigned to ${dept.name}`, `Target date ${c.sla.dueAt.toDateString()}`);
   await notify([body.assignedTo], c, 'assigned', `New case ${c.referenceId}`, c.title);
@@ -169,6 +201,34 @@ export async function reopen(req, res) {
   const admins = await User.find({ role: 'admin', isActive: true }, '_id');
   await notify([c.assignedTo, ...admins.map((a) => a._id)], c, 'reopened', `${c.referenceId} reopened by citizen`, reason);
   ok(res, c);
+}
+
+// "Me too": one vote per citizen; votes raise the explainable priority score until staff confirm a priority.
+export async function upvote(req, res) {
+  const c = await Complaint.findById(req.params.id);
+  if (!c) throw notFound();
+  if (isOwner(req.user, c)) throw badRequest('You cannot upvote your own report');
+  if (req.method === 'DELETE') {
+    if ((await Vote.deleteOne({ complaintId: c._id, userId: req.user._id })).deletedCount) c.upvotes = Math.max(0, c.upvotes - 1);
+  } else {
+    try {
+      await Vote.create({ complaintId: c._id, userId: req.user._id });
+      c.upvotes += 1;
+    } catch (err) {
+      if (err.code !== 11000) throw err; // already voted: idempotent
+    }
+  }
+  c.upvotes = await Vote.countDocuments({ complaintId: c._id }); // recount: exact under concurrent votes
+  const score = scorePriority({ text: `${c.title} ${c.description}`, category: c.category, duplicateCount: c.duplicateCandidates?.length || 0, upvotes: c.upvotes });
+  c.priorityScore = { total: score.total, factors: score.factors };
+  if (!c.priorityConfirmed) c.priority = score.priority;
+  await c.save();
+  ok(res, { upvotes: c.upvotes, hasVoted: req.method !== 'DELETE', priority: c.priority });
+}
+
+export async function integrity(req, res) {
+  const c = await loadForUser(req.params.id, req.user);
+  ok(res, await verifyHistoryChain(c._id));
 }
 
 // Live duplicate hints for the report form. Returns only public-safe fields.

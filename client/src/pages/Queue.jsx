@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { CityFilter } from '../components/Insights';
 import { CategoryBadge, Empty, ErrorBox, PageTitle, PriorityBadge, Spinner, StatusBadge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { CATEGORIES, STATUS, STATUS_KEYS, fmtDay, timeLeft } from '../utils/format';
 
-const FILTERS = ['status', 'category', 'priority', 'ward', 'overdue', 'q'];
+const FILTERS = ['status', 'category', 'priority', 'city', 'overdue', 'q'];
 
 export default function Queue() {
   const { user } = useAuth();
@@ -35,7 +36,7 @@ export default function Queue() {
         subtitle={user.role === 'admin' ? 'Review, confirm and assign incoming reports.' : 'Cases assigned to you or your department.'}
       />
 
-      <div className="card mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="card mb-4 grid items-center gap-3 p-4 sm:grid-cols-2 lg:grid-cols-7">
         <input className="input lg:col-span-2" placeholder="Search title or reference" aria-label="Search" defaultValue={params.get('q') || ''}
           onKeyDown={(e) => e.key === 'Enter' && setFilter('q', e.currentTarget.value.trim())} />
         <select className="input" aria-label="Status" value={params.get('status') || ''} onChange={(e) => setFilter('status', e.target.value)}>
@@ -50,6 +51,7 @@ export default function Queue() {
           <option value="">All priorities</option>
           {['critical', 'high', 'medium', 'low'].map((p) => <option key={p}>{p}</option>)}
         </select>
+        {user.role === 'admin' && <div className="[&_.label]:sr-only"><CityFilter value={params.get('city') || ''} onChange={(v) => setFilter('city', v)} /></div>}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={params.get('overdue') === 'true'} onChange={(e) => setFilter('overdue', e.target.checked ? 'true' : '')} /> Overdue only
         </label>
@@ -79,8 +81,8 @@ export default function Queue() {
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3"><CategoryBadge category={c.category} />{c.aiAnalysis?.category && c.aiAnalysis.category !== c.category && <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">AI: {c.aiAnalysis.category}</p>}</td>
                     <td className="px-4 py-3"><PriorityBadge priority={c.priority} /></td>
-                    <td className="px-4 py-3">{c.ward || '—'}</td>
-                    <td className="px-4 py-3">{c.departmentId?.name || <span className="text-slate-400">Unassigned</span>}</td>
+                    <td className="px-4 py-3">{c.ward || '—'}<p className="text-xs text-slate-500">{c.city}</p></td>
+                    <td className="px-4 py-3">{c.departmentId?.name || <span className="text-slate-400">Unassigned</span>}{c.routing?.method === 'auto' && <span className="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-800 dark:bg-brand-800/30 dark:text-brand-100">AUTO</span>}{c.upvotes > 0 && <p className="text-xs text-slate-500">👍 {c.upvotes}</p>}</td>
                     <td className={`px-4 py-3 text-xs font-medium ${sla?.overdue ? 'text-red-600' : ''}`}>{sla?.text || '—'}</td>
                   </tr>
                 );

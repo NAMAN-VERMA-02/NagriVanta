@@ -5,7 +5,7 @@ const CATEGORY_KEYWORDS = {
   garbage: ['garbage', 'trash', 'waste', 'litter', 'dump', 'dumping', 'bin', 'kooda', 'kachra', 'safai', 'collection', 'dirty', 'कूड़ा', 'कचरा'],
   water: ['water supply', 'pipe', 'pipeline', 'leak', 'leakage', 'tap', 'water pressure', 'muddy water', 'paani', 'pani', 'पानी', 'hydrant', 'main break'],
   streetlight: ['streetlight', 'street light', 'street lamp', 'lamp', 'light pole', 'pole', 'bulb', 'flicker', 'batti', 'बत्ती'],
-  drainage: ['drain', 'drainage', 'sewer', 'manhole', 'waterlogging', 'water logging', 'overflow', 'nali', 'naali', 'नाली', 'clog', 'choked'],
+  drainage: ['drain', 'drainage', 'sewer', 'manhole', 'waterlogging', 'water logging', 'overflow', 'nali', 'naali', 'नाली', 'clog', 'choked', 'jaam', 'जाम', 'bhar gaya', 'भर गया', 'gutter', 'ganda paani'],
 };
 
 export function ruleCategory(text = '') {
@@ -17,6 +17,7 @@ export function ruleCategory(text = '') {
   }
   return {
     category: best.category,
+    hits: best.hits.length,
     confidence: best.hits.length ? Math.min(0.9, 0.4 + 0.15 * best.hits.length) : 0.2,
     reasons: best.hits.length ? [`Matched keywords: ${best.hits.slice(0, 4).join(', ')}`] : ['No category keywords matched'],
   };
@@ -39,11 +40,12 @@ export function priorityFromScore(total) {
 }
 
 // Transparent score: every point is traceable to a listed factor.
-export function scorePriority({ text = '', category = 'other', duplicateCount = 0 }) {
+export function scorePriority({ text = '', category = 'other', duplicateCount = 0, upvotes = 0 }) {
   const t = text.toLowerCase();
   const factors = [];
   if (CATEGORY_BASE[category]) factors.push({ label: `Category base (${category})`, points: CATEGORY_BASE[category] });
   for (const f of FACTORS) if (f.words.some((w) => t.includes(w))) factors.push({ label: f.label, points: f.points });
+  if (upvotes) factors.push({ label: `${upvotes} citizen(s) confirmed "me too"`, points: Math.min(15, upvotes * 3) });
   if (duplicateCount) factors.push({ label: `${duplicateCount} similar nearby report(s)`, points: Math.min(15, duplicateCount * 5) });
   const total = factors.reduce((s, f) => s + f.points, 0);
   return { total, factors, priority: priorityFromScore(total) };

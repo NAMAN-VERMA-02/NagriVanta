@@ -22,6 +22,17 @@ export async function requireAuth(req, res, next) {
   next();
 }
 
+// Attaches req.user when a valid token is sent, but never rejects the request.
+export async function optionalAuth(req, res, next) {
+  if (!req.get('authorization')) return next();
+  try {
+    await requireAuth(req, res, () => {});
+  } catch {
+    req.user = undefined;
+  }
+  return next();
+}
+
 export const requireRole = (...roles) => (req, res, next) => {
   if (!roles.includes(req.user.role)) throw forbidden();
   next();

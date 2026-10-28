@@ -1,9 +1,18 @@
 import { z } from 'zod';
-import { CATEGORIES, PRIORITIES, STATUSES } from '../config/constants.js';
+import { CATEGORIES, CITY_NAMES, PRIORITIES, STATUSES } from '../config/constants.js';
+import { env } from '../config/env.js';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 // multipart forms send numbers as strings
 const num = (min, max) => z.coerce.number().min(min).max(max);
+
+// "2026-10-28" means that local day (APP_TZ_OFFSET), not UTC midnight. endOfDay makes "to" inclusive.
+const dateParam = (endOfDay) => z.string().max(40).transform((s, ctx) => {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const d = new Date(dateOnly ? `${s}T${endOfDay ? '23:59:59.999' : '00:00:00'}${env.tzOffset}` : s);
+  if (Number.isNaN(d.getTime())) { ctx.addIssue({ code: 'custom', message: 'Invalid date' }); return z.NEVER; }
+  return d;
+});
 
 export const registerSchema = z.strictObject({
   name: z.string().trim().min(2).max(80),
@@ -26,11 +35,14 @@ export const createComplaintSchema = z.strictObject({
   title: z.string().trim().min(5).max(120),
   description: z.string().trim().min(10).max(2000),
   category: z.enum([...CATEGORIES, 'auto']).default('auto'),
-  lat: num(-90, 90),
-  lng: num(-180, 180),
+  // optional only because a photo's GPS can supply the location; the controller enforces one of them
+  lat: num(-90, 90).optional(),
+  lng: num(-180, 180).optional(),
+  locationSource: z.enum(['gps', 'map']).optional(),
   address: z.string().trim().max(200).optional(),
   ward: z.string().trim().max(80).optional(),
-  source: z.enum(['web', 'mobile']).optional(),
+  city: z.enum(CITY_NAMES).optional(),
+  source: z.enum(['web', 'mobile', 'voice', 'chat']).optional(),
 });
 
 export const listQuerySchema = z.object({
@@ -41,8 +53,11 @@ export const listQuerySchema = z.object({
   departmentId: objectId.optional(),
   overdue: z.enum(['true', 'false']).optional(),
   q: z.string().max(100).optional(),
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
+  city: z.enum(CITY_NAMES).optional(),
+  from: dateParam(false).optional(),
+  to: dateParam(true).optional(),
+  near: z.string().regex(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/).optional(), // "lat,lng" for the community feed
+  sort: z.enum(['new', 'top']).optional(),
   page: z.string().optional(),
   limit: z.string().optional(),
 });
@@ -83,6 +98,22 @@ export const nearbySchema = z.object({
   lng: num(-180, 180),
   text: z.string().max(2000).optional(),
   category: z.enum([...CATEGORIES, 'auto']).optional(),
+});
+
+export const chatSchema = z.strictObject({
+  messages: z.array(z.strictObject({ role: z.enum(['user', 'assistant']), content: z.string().trim().min(1).max(2000) })).min(1).max(20),
+  lang: z.enum(['en', 'hi']).optional(),
+});
+
+export const open311CreateSchema = z.object({
+  api_key: z.string().min(8).max(200),
+  service_code: z.enum(CATEGORIES),
+  lat: num(-90, 90),
+  long: num(-180, 180),
+  description: z.string().trim().min(10).max(2000),
+  address_string: z.string().trim().max(200).optional(),
+  account_id: z.string().trim().max(80).optional(), // the caller's own id for this request (shared case id)
+  first_name: z.string().trim().max(60).optional(),
 });
 
 export const departmentSlaSchema = z.strictObject({
