@@ -161,11 +161,19 @@ mobile/src/  app/ (Expo Router screens) components/ lib/
 data/        nyc311_sample.csv, civic_labelled_india.json, README.md (sources + licences)
 ```
 
-## 9. Deployment notes
+## 9. Deployment (Vercel)
 
-- API: any Node host (Render, Railway, a VPS). Set the env vars above, use MongoDB Atlas, serve over HTTPS.
-- Web: `cd client && npm run build`, host `dist/` on Netlify/Vercel/any static host, set `VITE_API_URL`, add the site to `CORS_ORIGINS`.
-- Uploaded photos are stored on the API server's disk (`server/uploads/`). For a real deployment move them to object storage (S3, Cloudinary).
+Live demo: web **https://civiclens-web-murex.vercel.app** · API **https://civiclens-api-coral.vercel.app** (`/health`).
+
+The API and the web app are two Vercel projects:
+
+- **API (`server/`)**: `server/api/index.js` is the serverless entry and `server/vercel.json` sends every path to it. A daily Vercel Cron calls `/api/v1/jobs/sla` to escalate overdue cases (the Hobby plan allows daily crons). Uploaded photos are stored in MongoDB, because serverless disks are not shared or persistent.
+  Env vars in Vercel: `MONGODB_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `CRON_SECRET`, `CORS_ORIGINS` (include the web URL), `NODE_ENV=production`.
+- **Web (`client/`)**: static Vite build with an SPA rewrite in `client/vercel.json`. Env var: `VITE_API_URL` = the API URL.
+- **MongoDB Atlas** must allow Vercel's changing IPs: Atlas → *Network Access* → *Add IP Address* → *Allow access from anywhere* (`0.0.0.0/0`), with a strong DB password.
+- Seed the online database once from your computer: put the Atlas URI and a `SEED_PASSWORD` in `server/.env`, then `npm run seed`.
+
+Deploy from each folder with `npx vercel deploy --prod`. Images are limited to 4 MB each because Vercel caps request bodies at about 4.5 MB.
 
 ## 10. Known limits (not built)
 

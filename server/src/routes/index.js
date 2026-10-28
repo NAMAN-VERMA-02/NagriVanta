@@ -6,6 +6,8 @@ import { upload, verifyImages } from '../middleware/upload.js';
 import * as auth from '../controllers/auth.js';
 import * as complaints from '../controllers/complaints.js';
 import * as admin from '../controllers/admin.js';
+import { escalateOverdue } from '../jobs/sla.js';
+import { forbidden, ok } from '../utils/http.js';
 
 const r = Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: env.isTest ? 1000 : 20, standardHeaders: 'draft-8', legacyHeaders: false });
@@ -41,6 +43,12 @@ r.get('/admin/analytics', requireAuth, staff, admin.analytics);
 r.get('/admin/users', requireAuth, adminOnly, admin.listUsers);
 r.post('/admin/users', requireAuth, adminOnly, admin.createStaff);
 r.patch('/admin/departments/:id', requireAuth, adminOnly, admin.updateDepartmentSla);
+
+// scheduled job trigger (Vercel Cron sends Authorization: Bearer <CRON_SECRET>)
+r.get('/jobs/sla', async (req, res) => {
+  if (!env.cronSecret || req.get('authorization') !== `Bearer ${env.cronSecret}`) throw forbidden();
+  ok(res, { escalated: await escalateOverdue() });
+});
 
 // notifications
 r.get('/notifications', requireAuth, admin.notifications);

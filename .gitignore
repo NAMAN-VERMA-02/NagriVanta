@@ -4,7 +4,5 @@ node_modules/
 dist/
 .expo/
 web-build/
-server/uploads/*
-!server/uploads/.gitkeep
 *.log
 .DS_Store

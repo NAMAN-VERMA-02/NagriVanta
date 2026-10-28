@@ -11,12 +11,14 @@ import ComplaintHistory from '../src/models/ComplaintHistory.js';
 import Department from '../src/models/Department.js';
 import Feedback from '../src/models/Feedback.js';
 import Notification from '../src/models/Notification.js';
+import Upload from '../src/models/Upload.js';
 import User from '../src/models/User.js';
 import { ruleTriage } from '../src/services/ai.js';
 import { newReferenceId } from '../src/services/complaints.js';
 import { scorePriority } from '../src/services/rules.js';
 
-export const DEMO_PASSWORD = 'Demo@12345';
+// Set SEED_PASSWORD in .env for any database other people can reach.
+export const DEMO_PASSWORD = process.env.SEED_PASSWORD || 'Demo@12345';
 
 const DEPARTMENTS = [
   { code: 'PWD', name: 'Public Works (Roads)', categories: ['road'], description: 'Roads, potholes, footpaths' },
@@ -31,7 +33,7 @@ const FLOW = ['submitted', 'submitted', 'under_review', 'assigned', 'assigned', 
 
 export async function seed({ log = console.log } = {}) {
   const data = JSON.parse(fs.readFileSync(new URL('../../data/civic_labelled_india.json', import.meta.url), 'utf8'));
-  await Promise.all([Complaint, ComplaintHistory, Department, Feedback, Notification, User].map((m) => m.deleteMany({})));
+  await Promise.all([Complaint, ComplaintHistory, Department, Feedback, Notification, Upload, User].map((m) => m.deleteMany({})));
   await Complaint.syncIndexes();
 
   const depts = await Department.insertMany(DEPARTMENTS);
@@ -100,7 +102,7 @@ export async function seed({ log = console.log } = {}) {
   await ComplaintHistory.collection.insertMany(histories);
 
   log(`Seeded ${depts.length} departments, ${1 + officers.length + citizens.length} users, ${data.items.length} complaints, ${histories.length} history events.`);
-  log(`Demo logins (password ${DEMO_PASSWORD}): admin@civiclens.local, pwd.officer@civiclens.local, citizen1@civiclens.local`);
+  log(`Demo logins (password ${process.env.SEED_PASSWORD ? 'from SEED_PASSWORD in .env' : DEMO_PASSWORD}): admin@civiclens.local, pwd.officer@civiclens.local, citizen1@civiclens.local`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

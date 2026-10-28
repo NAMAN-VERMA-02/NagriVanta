@@ -4,7 +4,7 @@ import Department from '../models/Department.js';
 import Feedback from '../models/Feedback.js';
 import User from '../models/User.js';
 import { ACTIVE_STATUSES, ASSIGNABLE_FROM, DEFAULT_SLA_HOURS, REOPENABLE_FROM, REOPEN_WINDOW_DAYS } from '../config/constants.js';
-import { fileUrls } from '../middleware/upload.js';
+import { saveUploads } from '../middleware/upload.js';
 import { createComplaint, toCitizenView, toPublicView, triageInBackground } from '../services/complaints.js';
 import { findDuplicates } from '../services/duplicates.js';
 import { allowedNext, applyTransition, canOfficerAct, notify, recordHistory, STATUS_LABEL } from '../services/workflow.js';
@@ -29,7 +29,7 @@ async function loadForUser(id, user) {
 
 export async function create(req, res) {
   const input = createComplaintSchema.parse(req.body);
-  const complaint = await createComplaint(input, req.user, fileUrls(req));
+  const complaint = await createComplaint(input, req.user, await saveUploads(req));
   triageInBackground(complaint._id);
   ok(res, toCitizenView(complaint), null, 201);
 }
@@ -102,7 +102,7 @@ export async function changeStatus(req, res) {
   const body = statusSchema.parse(req.body);
   const c = await Complaint.findById(req.params.id);
   if (!c) throw notFound();
-  await applyTransition(c, body.to, req.user, { note: body.note, evidence: fileUrls(req) });
+  await applyTransition(c, body.to, req.user, { note: body.note, evidence: await saveUploads(req) });
   ok(res, c);
 }
 

@@ -13,5 +13,6 @@ export const env = {
   geminiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   aiTimeoutMs: Number(process.env.AI_TIMEOUT_MS || 8000),
+  cronSecret: process.env.CRON_SECRET || '',
   slaCheckMinutes: Number(process.env.SLA_CHECK_MINUTES || 5),
 };
