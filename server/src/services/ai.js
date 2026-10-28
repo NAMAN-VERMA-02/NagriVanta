@@ -12,26 +12,31 @@ const gemini = () => (client ??= new GoogleGenAI({ apiKey: env.geminiKey }));
  * One structured Gemini call. `parts` mixes text and inline images ({ mimeType, data: base64 }).
  * Swappable in tests through setAiProvider.
  */
-let provider = async (parts, jsonSchema) => {
+let provider = async (parts, jsonSchema, { model, timeoutMs }) => {
   const res = await gemini().models.generateContent({
-    model: env.geminiModel,
+    model,
     contents: [{ role: 'user', parts: parts.map((p) => (typeof p === 'string' ? { text: p } : { inlineData: p })) }],
-    config: { responseMimeType: 'application/json', responseJsonSchema: jsonSchema, temperature: 0.1, abortSignal: AbortSignal.timeout(env.aiTimeoutMs) },
+    config: { responseMimeType: 'application/json', responseJsonSchema: jsonSchema, temperature: 0.1, abortSignal: AbortSignal.timeout(timeoutMs) },
   });
   return JSON.parse(res.text);
 };
 export const setAiProvider = (fn) => { provider = fn; };
 export const aiEnabled = () => Boolean(env.geminiKey) || provider.isMock === true;
 
-// Calls the provider with at most one retry and validates the result. Throws on failure.
-export async function callAi(parts, jsonSchema, zodSchema) {
+/**
+ * Calls the provider and validates the result. Throws on failure.
+ * Tries GEMINI_MODEL first, then GEMINI_FALLBACK_MODEL when the first is overloaded (503) or slow;
+ * a 4xx (bad key, no billing, unknown model) stops immediately because retrying cannot help.
+ * Returns { data, model } so callers can record which model answered.
+ */
+export async function callAi(parts, jsonSchema, zodSchema, { timeoutMs = env.aiTimeoutMs } = {}) {
+  const models = [...new Set([env.geminiModel, env.geminiFallbackModel].filter(Boolean))];
   let lastError;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (const model of models) {
     try {
-      return zodSchema.parse(await provider(parts, jsonSchema));
+      return { data: zodSchema.parse(await provider(parts, jsonSchema, { model, timeoutMs })), model };
     } catch (err) {
       lastError = err.name === 'ZodError' ? new Error('Malformed AI output') : err;
-      // a 4xx (bad key, no billing, unknown model) will not succeed on retry
       if (/\b(400|401|403|404)\b/.test(String(err.message))) break;
     }
   }
@@ -115,8 +120,8 @@ export async function triage(title, description, image) {
   try {
     const parts = [`${PROMPT}\n\nREPORT TITLE: ${title}\nREPORT DESCRIPTION: ${description}`];
     if (image) parts.push({ mimeType: image.contentType, data: image.data.toString('base64') });
-    const out = await callAi(parts, triageSchema, triageOutput);
-    return stamp({ status: 'done', engine: 'gemini', ...out, usedImage: Boolean(image), model: env.geminiModel });
+    const { data, model } = await callAi(parts, triageSchema, triageOutput);
+    return stamp({ status: 'done', engine: 'gemini', ...data, usedImage: Boolean(image), model });
   } catch (err) {
     return stamp(localTriage(title, description, err.message || 'AI error'));
   }

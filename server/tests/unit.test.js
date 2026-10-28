@@ -8,7 +8,7 @@ import { hammingHex } from '../src/middleware/upload.js';
 import { scoreWardRisk } from '../src/services/risk.js';
 import { localTriage } from '../src/services/ai.js';
 import { historyDigest } from '../src/services/workflow.js';
-import { nearestCity } from '../src/config/constants.js';
+import { inferWard, nearestCity } from '../src/config/constants.js';
 
 const admin = { _id: 'a', role: 'admin' };
 const officer = { _id: 'o1', role: 'officer', departmentId: 'd1' };
@@ -86,6 +86,8 @@ test('trained classifier understands Hinglish and Hindi', () => {
   assert.equal(localTriage('pipe se paani beh raha hai', '').category, 'water');
   assert.equal(localTriage('bada gaddha hai road pe', '').category, 'road');
   assert.equal(localTriage('गली में कूड़ा पड़ा है', '').category, 'garbage');
+  assert.equal(localTriage('हमारी गली की स्ट्रीट लाइट 5 दिन से बंद है', '').category, 'streetlight');
+  assert.equal(localTriage('सीवर का पानी सड़क पर भर गया है', '').category, 'drainage');
 });
 
 test('history digest changes when any field changes', () => {
@@ -97,4 +99,6 @@ test('history digest changes when any field changes', () => {
 test('nearest city from coordinates', () => {
   assert.equal(nearestCity(28.5708, 77.3261), 'Noida');
   assert.equal(nearestCity(28.6729, 77.4497), 'Ghaziabad');
+  assert.equal(inferWard(28.5710, 77.3265), 'Sector 18 Noida');
+  assert.equal(inferWard(19.07, 72.87), undefined, 'far away: no ward guessed');
 });

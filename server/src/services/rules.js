@@ -1,11 +1,11 @@
 // Deterministic, explainable rules. Used as the AI fallback and for the priority score.
 
 const CATEGORY_KEYWORDS = {
-  road: ['pothole', 'road', 'crack', 'speed breaker', 'footpath', 'pavement', 'asphalt', 'street repair', 'sadak', 'gaddha', 'सड़क', 'गड्ढा'],
-  garbage: ['garbage', 'trash', 'waste', 'litter', 'dump', 'dumping', 'bin', 'kooda', 'kachra', 'safai', 'collection', 'dirty', 'कूड़ा', 'कचरा'],
-  water: ['water supply', 'pipe', 'pipeline', 'leak', 'leakage', 'tap', 'water pressure', 'muddy water', 'paani', 'pani', 'पानी', 'hydrant', 'main break'],
-  streetlight: ['streetlight', 'street light', 'street lamp', 'lamp', 'light pole', 'pole', 'bulb', 'flicker', 'batti', 'बत्ती'],
-  drainage: ['drain', 'drainage', 'sewer', 'manhole', 'waterlogging', 'water logging', 'overflow', 'nali', 'naali', 'नाली', 'clog', 'choked', 'jaam', 'जाम', 'bhar gaya', 'भर गया', 'gutter', 'ganda paani'],
+  road: ['pothole', 'road', 'crack', 'speed breaker', 'footpath', 'pavement', 'asphalt', 'street repair', 'sadak', 'gaddha', 'सड़क', 'गड्ढा', 'गढ्ढा', 'रोड'],
+  garbage: ['garbage', 'trash', 'waste', 'litter', 'dump', 'dumping', 'bin', 'kooda', 'kachra', 'safai', 'collection', 'dirty', 'कूड़ा', 'कूड़े', 'कचरा', 'गंदगी', 'डस्टबिन'],
+  water: ['water supply', 'pipe', 'pipeline', 'leak', 'leakage', 'tap', 'water pressure', 'muddy water', 'paani', 'pani', 'पानी', 'hydrant', 'main break', 'पाइप', 'लीक', 'नल', 'टंकी'],
+  streetlight: ['streetlight', 'street light', 'street lamp', 'lamp', 'light pole', 'pole', 'bulb', 'flicker', 'batti', 'बत्ती', 'स्ट्रीट लाइट', 'स्ट्रीटलाइट', 'लाइट', 'खंभा', 'बल्ब', 'light band'],
+  drainage: ['drain', 'drainage', 'sewer', 'manhole', 'waterlogging', 'water logging', 'overflow', 'nali', 'naali', 'नाली', 'clog', 'choked', 'jaam', 'जाम', 'bhar gaya', 'भर गया', 'gutter', 'ganda paani', 'सीवर', 'गटर', 'मैनहोल', 'जलभराव'],
 };
 
 export function ruleCategory(text = '') {

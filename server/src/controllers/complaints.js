@@ -10,7 +10,9 @@ import { createComplaint, processNewComplaint, toCitizenView, toPublicView } fro
 import { findDuplicates } from '../services/duplicates.js';
 import { slaDueAt } from '../services/routing.js';
 import { scorePriority } from '../services/rules.js';
-import { verifyEvidence } from '../services/verification.js';
+import { aiVisualCheck, verifyEvidence } from '../services/verification.js';
+import { background } from '../services/background.js';
+import { env } from '../config/env.js';
 import {
   allowedNext, applyTransition, assertTransition, canOfficerAct, notify, recordHistory, STATUS_LABEL, verifyHistoryChain,
 } from '../services/workflow.js';
@@ -131,6 +133,10 @@ export async function changeStatus(req, res) {
   const media = await saveMedia(req);
   const verification = body.to === 'resolved' ? await verifyEvidence(c, media) : undefined;
   await applyTransition(c, body.to, req.user, { note: body.note, evidence: media.images, evidenceSha256: media.sha256, verification });
+  if (verification?.aiPending) {
+    const job = aiVisualCheck(c._id); // Gemini photo comparison after the response
+    if (env.isTest) await job; else background(job);
+  }
   if (verification?.status === 'needs_review') {
     const admins = await User.find({ role: 'admin', isActive: true }, '_id');
     await notify(admins.map((a) => a._id), c, 'verification', `Check evidence for ${c.referenceId}`, verification.checks.filter((x) => x.ok === false).map((x) => x.name).join(', '));

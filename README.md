@@ -1,8 +1,16 @@
 # NagriVanta: AI-Powered Civic Issue Reporting & Resolution Platform
 
+**🌐 Live demo: https://nagrivanta-web.vercel.app** · API: https://nagrivanta-api.vercel.app ([health](https://nagrivanta-api.vercel.app/health)) · Open data: [CSV](https://nagrivanta-api.vercel.app/api/v1/public/open-data.csv) · [Open311](https://nagrivanta-api.vercel.app/open311/v2/services.json)
+
+> The live demo runs on synthetic data for Ghaziabad and Noida. Demo account passwords for the live site are kept private; run it locally (below) to use the documented demo accounts.
+
 Citizens report potholes, garbage, water leaks, dark streetlights and blocked drains. Admins confirm the triage and assign a department with an SLA. Officers resolve the case with evidence. Citizens rate the fix or reopen it. Every step goes into an audit trail.
 
-**AI recommends. Rules validate. People decide.** The AI only suggests a category, summary and priority, and it runs *after* the complaint is saved. Google Gemini (text + photo) is used when a working key is set; otherwise a Naive Bayes model trained on the bundled datasets answers offline. If the AI is missing, slow or broken, the complaint is still saved.
+**AI recommends. Rules validate. People decide.** The AI only suggests a category, summary and priority, and it runs *after* the complaint is saved:
+
+1. **Instant (in the request, ~ms):** a Naive Bayes model trained on the bundled datasets classifies the report and smart routing assigns it. The citizen gets their reference ID right away.
+2. **Background (Gemini, ~5–20 s):** Google Gemini reads the text **and the photo** and refines the suggestion. On Vercel this runs after the response via `waitUntil`; the case page refreshes itself. If Gemini disagrees with an auto-routed category, admins are alerted instead of the case silently moving.
+3. **Fallbacks:** if the main model is overloaded (503) or slow, a fallback model is tried; if Gemini is unavailable, the offline result stays. A complaint is never lost because of the AI.
 
 **Stack: MERN only.** Every feature is MongoDB + Express + React + Node, with Tailwind CSS. Python was not needed for any feature: image understanding goes through the Gemini API, image hashing uses `sharp`, and the text classifier is trained and run in JavaScript.
 
@@ -70,7 +78,8 @@ Never commit `.env` files; they are git-ignored.
 | `MONGODB_URI` | `server/.env` | Yes (not for `npm run demo`) | **Local:** install MongoDB Community Server (https://www.mongodb.com/try/download/community), then use `mongodb://127.0.0.1:27017/nagrivanta`. **Cloud (free):** create an M0 cluster on MongoDB Atlas (https://www.mongodb.com/cloud/atlas/register) → *Database* → *Connect* → *Drivers* → copy the `mongodb+srv://…` string, put in your DB user's password, and add your IP under *Network Access*. |
 | `JWT_SECRET` | `server/.env` | Yes | Any long random string. Generate one: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `GEMINI_API_KEY` | `server/.env` | Optional | Google AI Studio: https://aistudio.google.com/app/apikey → **Create API key**. Some new projects get *"free tier not available"*: enable billing at https://aistudio.google.com/billing. Without a working key the offline trained model is used. |
-| `GEMINI_MODEL` | `server/.env` | Optional | Defaults to `gemini-3.8-flash` (older 2.x models are retired for new users). Model list: https://ai.google.dev/gemini-api/docs/models |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | `server/.env` | Optional | Default `gemini-flash-lite-latest` (fastest in our tests), fallback `gemini-flash-latest` when the first is overloaded. Model list: https://ai.google.dev/gemini-api/docs/models |
+| `AI_TIMEOUT_MS` | `server/.env` | Optional | Per Gemini call, default 25000 (calls run in the background; the chat assistant caps itself at 12 s). |
 | `SEED_PASSWORD` | `server/.env` | For shared DBs | Password for the demo accounts that `npm run seed` creates. Any strong string. |
 | `CRON_SECRET` | `server/.env` + Vercel | For Vercel Cron | Any long random string; protects `/api/v1/jobs/sla`. |
 | `OPEN311_API_KEYS` | `server/.env` | Optional | Comma-separated random strings you give to partner systems that file cases through Open311. |
@@ -107,7 +116,7 @@ A production build that talks to a plain `http://` API on Android needs HTTPS or
 
 ```bash
 cd server
-npm test        # 24 tests: workflow, permissions, uploads, AI fallback, routing, duplicates, audit chain, votes, Open311, assistant, SLA
+npm test        # 25 tests: workflow, permissions, uploads, AI fallback + background Gemini refinement, routing, duplicates, audit chain, votes, Open311, assistant, SLA
 npm run train   # retrain the offline classifier (writes src/ai/model.json)
 npm run eval    # held-out accuracy: keyword rules vs trained model (vs Gemini when the key works)
 ```
@@ -121,13 +130,17 @@ Held-out results (test rows never seen in training; NYC split by distinct descri
 
 The Indian hold-out is tiny and synthetic, and NYC descriptors are short US phrases. Quote these numbers only with their sample size.
 
+### Live verification (deployed site, 28 Oct 2026)
+
+An automated end-to-end check against the live API exercised every feature: role logins and permission checks, a voice-channel report with a photo, instant offline triage, smart routing, **background Gemini image + text classification** (`gemini-flash-lite-latest`, photo used), duplicate detection, a "me too" vote, SLA due date, officer resolution with fresh evidence, **Gemini before/after photo comparison**, citizen notifications, intact hash-chained history, rating, analytics + hotspots, weather risk alerts, open data + CORS, multi-city scorecard, Hindi and English assistant, Open311 create/read, service worker + manifest, and the protected cron endpoint. All checks passed after the fixes in this release (Devanagari keywords for the offline assistant, and instant offline replies for clear chat messages).
+
 ## 6. The 18 features (from the comparison study) and where they live
 
 | # | Feature | How it is implemented |
 |---|---|---|
 | 1 | Multi-channel intake (web, app, voice, chat) | Web form, Expo app, Web Speech voice input (en-IN/hi-IN), AI assistant chat (`/assistant/chat`), Open311 API. `source` records the channel. |
 | 2 | Photo/video upload with auto metadata | Up to 3 photos + 1 short video. The server reads EXIF capture time and GPS (`exifr`), re-encodes images (`sharp`) and stores them in MongoDB under random keys. A photo's GPS can supply the location. |
-| 3 | AI category classification (image + text) | Gemini receives the text and first photo; the offline Naive Bayes model (`services/classifier.js`) answers when Gemini is unavailable. |
+| 3 | AI category classification (image + text) | Offline Naive Bayes answers instantly; Gemini then reads the text **and first photo** in the background (`refineWithAi` in `services/complaints.js`). |
 | 4 | AI summary & priority prediction | One-line summary + suggested priority, plus a transparent rule score with every factor listed. |
 | 5 | Smart department routing (auto-assignment) | `services/routing.js`: city + category → department, then the least-loaded officer, when the category is reliable; otherwise a suggestion for the triage queue. |
 | 6 | Duplicate detection (text + image + location) | Text similarity, distance, category and 64-bit perceptual photo hashes (`services/duplicates.js`). Never merged automatically. |
@@ -204,7 +217,7 @@ Deploy from each folder with `npx vercel deploy --prod`. Images are limited to 4
 
 ## 10. Known limits
 
-- Gemini needs a key with billing enabled for its Google project; until then the offline model handles triage, the chat assistant and evidence checks (without the AI visual comparison).
+- Gemini needs a key with billing enabled for its Google project. Its response time varies a lot (5–20 s observed), which is why it runs in the background; without a key the offline model handles everything except the AI photo comparison.
 - Voice input on the website depends on browser support (Chrome, Edge, Safari). On mobile, use the keyboard microphone.
 - Real-time updates use polling, not websockets, because serverless hosting does not keep connections open.
 - In-memory rate limits are per server instance; add a Vercel Firewall rate-limit rule for `/api/v1/auth/*`.

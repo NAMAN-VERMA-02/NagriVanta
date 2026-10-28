@@ -50,18 +50,25 @@ export const CITIES = {
 export const CITY_NAMES = Object.keys(CITIES);
 export const cityOfWard = (ward) => CITY_NAMES.find((c) => ward && CITIES[c].wards[ward]);
 
-// Nearest city by straight-line distance; used when a report has no ward.
-export function nearestCity(lat, lng) {
-  let best = CITY_NAMES[0];
-  let bestD = Infinity;
-  for (const c of CITY_NAMES) {
-    for (const w of Object.values(CITIES[c].wards)) {
-      const d = (w.lat - lat) ** 2 + (w.lng - lng) ** 2;
-      if (d < bestD) { bestD = d; best = c; }
+// Nearest configured ward (and its city) to a point; km is an equirectangular approximation.
+export function nearestPlace(lat, lng) {
+  let best = { city: CITY_NAMES[0], ward: undefined, km: Infinity };
+  for (const city of CITY_NAMES) {
+    for (const [ward, w] of Object.entries(CITIES[city].wards)) {
+      const km = 111 * Math.hypot(w.lat - lat, (w.lng - lng) * Math.cos((lat * Math.PI) / 180));
+      if (km < best.km) best = { city, ward, km };
     }
   }
   return best;
 }
+
+export const nearestCity = (lat, lng) => nearestPlace(lat, lng).city;
+
+// Ward for a report that did not name one (e.g. Open311): only if a configured ward centre is close.
+export const inferWard = (lat, lng, maxKm = 5) => {
+  const p = nearestPlace(lat, lng);
+  return p.km <= maxKm ? p.ward : undefined;
+};
 
 export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 export const AUTO_ASSIGN_MIN_CONFIDENCE = 0.7;

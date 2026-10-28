@@ -191,6 +191,43 @@ test('AI failure never blocks saving; Gemini output is used when valid', async (
   setAiProvider(rules()); // non-mock again: aiEnabled() follows the (empty) key
 });
 
+test('Gemini refines in the background; disagreement on an auto-routed case alerts admins; AI photo check runs', async () => {
+  // Gemini answers "drainage" for a report the offline model routes as "road"
+  const gem = async (parts, schema) => (schema.properties.fixed
+    ? { fixed: true, confidence: 0.8, reason: 'Surface looks repaired' }
+    : { category: 'drainage', summary: 'Waterlogged stretch of road.', priority: 'high', reasons: ['standing water'], confidence: 0.9 });
+  gem.isMock = true;
+  setAiProvider(gem);
+  env.autoAssign = true;
+  try {
+    const res = await request(app).post('/api/v1/complaints').set(as('c1'))
+      .field('title', 'Pothole road damaged badly').field('description', 'Big pothole on the road near the crossing, road broken')
+      .field('lat', '28.6729').field('lng', '77.4497').field('ward', 'Kavi Nagar').attach('images', BEFORE, 'b.jpg');
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.aiAnalysis.engine, 'naive-bayes', 'citizen gets the fast offline answer');
+    const after = await Complaint.findById(res.body.data._id);
+    assert.equal(after.aiAnalysis.engine, 'gemini', 'Gemini result stored afterwards');
+    assert.equal(after.category, 'road', 'an auto-routed case is not silently re-categorised');
+    const notes = await request(app).get('/api/v1/notifications').set(as('admin'));
+    assert.ok(notes.body.data.some((n) => n.type === 'ai_review'), 'admins are told Gemini disagrees');
+
+    // resolve with fresh evidence: the AI visual comparison is added to the verification
+    const pwd = (await request(app).get('/api/v1/departments?city=Ghaziabad')).body.data.find((d) => d.code === 'PWD');
+    if (after.status !== 'assigned') await request(app).patch(`/api/v1/complaints/${after._id}/assign`).set(as('admin')).send({ departmentId: pwd._id });
+    await Complaint.updateOne({ _id: after._id }, { $set: { departmentId: pwd._id } });
+    assert.equal((await request(app).patch(`/api/v1/complaints/${after._id}/status`).set(as('pwd')).send({ to: 'in_progress' })).status, 200);
+    const done = await request(app).patch(`/api/v1/complaints/${after._id}/status`).set(as('pwd')).field('to', 'resolved').field('note', 'Patched').attach('evidence', AFTER, 'a.jpg');
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    const v = (await Complaint.findById(after._id)).resolution.verification;
+    const ai = v.checks.find((x) => x.name === 'AI visual comparison');
+    assert.equal(ai.ok, true);
+    assert.match(ai.detail, /Surface looks repaired/);
+  } finally {
+    env.autoAssign = false;
+    setAiProvider(rules());
+  }
+});
+
 test('community "me too" votes are one per citizen and raise priority', async () => {
   const c = await Complaint.findOne({ reportedBy: { $ne: (await mongoose.connection.db.collection('users').findOne({ email: 'citizen1@nagrivanta.local' }))._id }, status: 'submitted' });
   const first = await request(app).post(`/api/v1/complaints/${c._id}/upvote`).set(as('c1'));
@@ -241,7 +278,9 @@ test('Open311 GeoReport v2: list, read and create with an API key', async () => 
   const id = created.body[0].service_request_id;
   const one = await request(app).get(`/open311/v2/requests/${id}.json`);
   assert.equal(one.body[0].account_id, 'PARTNER-42');
-  assert.equal((await Complaint.findOne({ referenceId: id })).city, 'Noida');
+  const filed = await Complaint.findOne({ referenceId: id });
+  assert.equal(filed.city, 'Noida');
+  assert.equal(filed.ward, 'Sector 18 Noida', 'ward inferred from coordinates');
 });
 
 test('assistant drafts reports (English + Hindi), answers status, handles emergencies', async () => {
